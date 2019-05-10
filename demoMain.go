@@ -42,21 +42,21 @@ func main() {
 	// Login
 	sid := "1234567890123456789012345678901234567890"
 	login(conn, sid)
-	fmt.Println(conn.UserID, conn.SID)
+	fmt.Println(conn.UserID, conn.Session)
 }
 
 func login(conn *connection.Connection, sid string) {
-	userID, sessionID, err := parseSID(sid)
+	userID, session, err := parseSID(sid)
 	if err != nil {
 		panic(err)
 	}
-	err = conn.LoginWithSession(userID, sessionID)
+	err = conn.LoginWithSession(userID, session)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func parseSID(sid string) (userID uint32, sessionID [16]byte, err error) {
+func parseSID(sid string) (userID uint32, session [16]byte, err error) {
 	if len(sid) != 40 {
 		err = errors.New("illegal parameter")
 		return
@@ -64,10 +64,10 @@ func parseSID(sid string) (userID uint32, sessionID [16]byte, err error) {
 	userIDtmp, err := strconv.ParseUint(sid[:8], 16, 32)
 	userID = uint32(userIDtmp)
 
-	sessionIDtmp, err := hex.DecodeString(sid[8:40])
+	sessiontmp, err := hex.DecodeString(sid[8:40])
 	if err != nil {
 		return
 	}
-	copy(sessionID[:], sessionIDtmp[:32])
+	copy(session[:], sessiontmp[:32])
 	return
 }

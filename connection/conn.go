@@ -13,7 +13,7 @@ type MsgListener func(body bytes.Buffer)
 type Connection struct {
 	Version byte
 	UserID  uint32
-	SID     [16]byte
+	Session [16]byte
 
 	tcpConn   *net.TCPConn
 	listeners map[Command][]MsgListener
