@@ -11,7 +11,6 @@ const packetHeadLen = 17
 type MsgListener func(body bytes.Buffer)
 
 type Connection struct {
-	Version byte
 	UserID  uint32
 	Session [16]byte
 
