@@ -13,7 +13,7 @@ func head2binary(head packetHead) (buffer *bytes.Buffer, err error) {
 			return
 		}
 	}()
-	buffer = bytes.NewBuffer([]byte{})
+	buffer = new(bytes.Buffer)
 	mustBinaryWrite(buffer, head.length)
 	mustBinaryWrite(buffer, head.version)
 	mustBinaryWrite(buffer, head.command)
@@ -28,7 +28,7 @@ func var2binary(values ...interface{}) (buffer *bytes.Buffer, err error) {
 			return
 		}
 	}()
-	buffer = bytes.NewBuffer([]byte{})
+	buffer = new(bytes.Buffer)
 	for _, v := range values {
 		mustBinaryWrite(buffer, v)
 	}
