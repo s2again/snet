@@ -2,6 +2,7 @@ package connection
 
 import (
 	"bytes"
+	"log"
 	"net"
 )
 
@@ -9,13 +10,14 @@ const ProtocolVersion byte = '1'
 const packetHeadLen = 17
 
 type MsgListener func(body bytes.Buffer)
+type MsgListenerID *MsgListener
 
 type Connection struct {
 	UserID  uint32
 	Session [16]byte
 
 	tcpConn   *net.TCPConn
-	listeners map[Command][]MsgListener
+	listeners map[Command][]*MsgListener
 	sequence  int32
 }
 
@@ -36,7 +38,9 @@ func Connect(addr *net.TCPAddr) (conn *Connection, err error) {
 			}
 			if packet != nil {
 				for _, listenFunc := range conn.listeners[packet.head.command] {
-					listenFunc(packet.body)
+					if listenFunc != nil {
+						(*listenFunc)(packet.body)
+					}
 				}
 			}
 		}
@@ -48,15 +52,25 @@ func (c *Connection) Close() error {
 	return c.tcpConn.Close()
 }
 
-func (c *Connection) AddListener(cmd Command, listen MsgListener) {
+func (c *Connection) AddListener(cmd Command, listen MsgListener) MsgListenerID {
 	if c.listeners == nil {
-		c.listeners = make(map[Command][]MsgListener)
+		c.listeners = make(map[Command][]*MsgListener)
 	}
-	c.listeners[cmd] = append(c.listeners[cmd], listen)
+	c.listeners[cmd] = append(c.listeners[cmd], &listen)
+	return &listen
 }
 
-func (c *Connection) RemoveListener(cmd Command, listen MsgListener) {
-	panic("Not Implement")
+func (c *Connection) RemoveListener(cmd Command, listenID MsgListenerID) {
+	if c.listeners == nil {
+		return
+	}
+	for i, p := range c.listeners[cmd] {
+		if p == listenID {
+			log.Println("remove ID", listenID)
+			c.listeners[cmd] = append(c.listeners[cmd][:i], c.listeners[cmd][i+1:]...)
+			return
+		}
+	}
 }
 
 // data must be fixed-size type
