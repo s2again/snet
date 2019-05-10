@@ -2,6 +2,7 @@ package connection
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 )
@@ -19,7 +20,7 @@ type packet struct {
 	body packetBody
 }
 
-func depackFromStream(reader io.Reader) (packet *packet, err error) {
+func depackFromStream(reader io.Reader) (pack *packet, err error) {
 	const maxPacketLength = 65536
 	var buffer [maxPacketLength]byte
 
@@ -37,7 +38,17 @@ func depackFromStream(reader io.Reader) (packet *packet, err error) {
 		return nil, err
 	}
 	n, err = reader.Read(buffer[packetHeadLen : head.length-packetHeadLen]) // receive body
-	return nil, err
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("%X", buffer[:head.length])
+	var body bytes.Buffer
+	body.Write(buffer[packetHeadLen : head.length-packetHeadLen])
+	pack = &packet{
+		head: head,
+		body: packetBody(body),
+	}
+	return
 }
 
 func parseHead(input *bytes.Reader) (head packetHead, err error) {
