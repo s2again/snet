@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"strconv"
 
@@ -40,7 +41,7 @@ func main() {
 	defer conn.Close()
 
 	// Login
-	sid := "031F02DEC2E3463BFDE809AF3443B164AD31E6A2"
+	sid := "00000000780FB295BA1DEAA01FE19E583AAEDC39"
 	login(conn, sid)
 	fmt.Println(conn.UserID, conn.Session)
 	select {}
@@ -51,7 +52,9 @@ func login(conn *connection.Connection, sid string) {
 	if err != nil {
 		panic(err)
 	}
-	err = conn.LoginWithSession(userID, session)
+	err = conn.LoginWithSession(userID, session, func(info connection.CommendSvrInfo) {
+		log.Printf("%+v\n", info)
+	})
 	if err != nil {
 		panic(err)
 	}
