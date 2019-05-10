@@ -40,9 +40,10 @@ func main() {
 	defer conn.Close()
 
 	// Login
-	sid := "1234567890123456789012345678901234567890"
+	sid := "031F02DEC2E3463BFDE809AF3443B164AD31E6A2"
 	login(conn, sid)
 	fmt.Println(conn.UserID, conn.Session)
+	select {}
 }
 
 func login(conn *connection.Connection, sid string) {

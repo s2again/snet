@@ -2,7 +2,6 @@ package connection
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"log"
 )
@@ -33,15 +32,17 @@ func depackFromStream(reader io.Reader) (pack *packet, err error) {
 		log.Println("Only Receive Packet Head Bytes Length", n)
 		return nil, err
 	}
+	log.Println("Receive Head", buffer[:packetHeadLen])
 	head, err := parseHead(bytes.NewReader(buffer[:packetHeadLen]))
 	if err != nil {
 		return nil, err
 	}
-	n, err = reader.Read(buffer[packetHeadLen : head.length-packetHeadLen]) // receive body
+	log.Printf("Parse Head %+v", head)
+	n, err = reader.Read(buffer[packetHeadLen:head.length]) // receive body
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("%X", buffer[:head.length])
+	log.Printf("Receive Body(%d bytes) %X\n", head.length-packetHeadLen, buffer[packetHeadLen:head.length])
 	var body bytes.Buffer
 	body.Write(buffer[packetHeadLen : head.length-packetHeadLen])
 	pack = &packet{

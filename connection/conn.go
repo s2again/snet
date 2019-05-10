@@ -59,7 +59,9 @@ func (c *Connection) AddListener(cmd Command, listen MsgListener) MsgListenerID 
 		c.listeners = make(map[Command][]*MsgListener)
 	}
 	c.listeners[cmd] = append(c.listeners[cmd], &listen)
-	return &listen
+	id := &listen
+	log.Println("add Listener", id)
+	return id
 }
 
 func (c *Connection) RemoveListener(cmd Command, listenID MsgListenerID) {
@@ -68,7 +70,7 @@ func (c *Connection) RemoveListener(cmd Command, listenID MsgListenerID) {
 	}
 	for i, p := range c.listeners[cmd] {
 		if p == listenID {
-			log.Println("remove ID", listenID)
+			log.Println("remove Listener", listenID)
 			c.listeners[cmd] = append(c.listeners[cmd][:i], c.listeners[cmd][i+1:]...)
 			return
 		}
