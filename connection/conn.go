@@ -30,22 +30,24 @@ func Connect(addr *net.TCPAddr) (conn *Connection, err error) {
 		tcpConn:  tcpConn,
 		sequence: 0,
 	}
-	go func() {
-		for {
-			packet, err := depackFromStream(conn.tcpConn)
-			if err != nil {
-				return
-			}
-			if packet != nil {
-				for _, listenFunc := range conn.listeners[packet.head.command] {
-					if listenFunc != nil {
-						(*listenFunc)(packet.body)
-					}
+	go conn.handlePacket()
+	return
+}
+
+func (c *Connection) handlePacket() {
+	for {
+		packet, err := depackFromStream(c.tcpConn)
+		if err != nil {
+			return
+		}
+		if packet != nil {
+			for _, listenFunc := range c.listeners[packet.head.command] {
+				if listenFunc != nil {
+					(*listenFunc)(packet.body)
 				}
 			}
 		}
-	}()
-	return
+	}
 }
 
 func (c *Connection) Close() error {
