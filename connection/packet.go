@@ -28,6 +28,7 @@ func depackFromStream(reader io.Reader) (pack *packet, err error) {
 		log.Println(err)
 		return nil, err
 	}
+	log.Println("response bytes", buffer[:n])
 	if n != packetHeadLen {
 		log.Println("Only Receive Packet Head Bytes Length", n)
 		return nil, err

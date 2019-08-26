@@ -43,7 +43,7 @@ func main() {
 	// Login
 	sid := "00000000780FB295BA1DEAA01FE19E583AAEDC39"
 	login(conn, sid)
-	fmt.Println(conn.UserID, conn.Session)
+	fmt.Printf("id: %v session: %v\n", conn.UserID, conn.Session)
 	select {}
 }
 
@@ -53,7 +53,7 @@ func login(conn *connection.Connection, sid string) {
 		panic(err)
 	}
 	err = conn.LoginWithSession(userID, session, func(info connection.CommendSvrInfo) {
-		log.Printf("%+v\n", info)
+		log.Printf("CommendSvrInfo %+v\n", info)
 	})
 	if err != nil {
 		panic(err)

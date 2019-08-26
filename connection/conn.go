@@ -103,6 +103,7 @@ func (c *Connection) Send(cmd Command, body ...interface{}) error {
 	if err != nil {
 		return err
 	}
+	log.Printf("Send Message %v \n", packetBin.Bytes())
 	_, err = c.tcpConn.Write(packetBin.Bytes())
 	if err != nil {
 		return err

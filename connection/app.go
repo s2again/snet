@@ -12,7 +12,6 @@ func (c *Connection) LoginWithSession(userID uint32, sid [16]byte, getCommendLis
 	var id MsgListenerID
 	id = c.AddListener(Command_COMMEND_ONLINE, func(body bytes.Buffer) {
 		c.RemoveListener(Command_COMMEND_ONLINE, id)
-		log.Println(body.Bytes())
 		info, err := parseCommendSvrInfo(&body)
 		if err != nil {
 			_ = c.Close()
@@ -48,6 +47,7 @@ func parseCommendSvrInfo(buffer *bytes.Buffer) (info CommendSvrInfo, err error) 
 			return
 		}
 	}()
+	log.Println("Command_COMMEND_ONLINE response bytes", buffer.Bytes())
 	mustBinaryRead(buffer, &info.maxOnlineID)
 	mustBinaryRead(buffer, &info.isVIP)
 	mustBinaryRead(buffer, &info.onlineCnt)
