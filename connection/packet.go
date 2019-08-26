@@ -2,6 +2,8 @@ package connection
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 )
@@ -39,6 +41,11 @@ func depackFromStream(reader io.Reader) (pack *packet, err error) {
 		return nil, err
 	}
 	log.Printf("Parse Head %+v", head)
+	if head.length > maxPacketLength {
+		err = errors.New(fmt.Sprintf("Too Large Packet(%d bytes)", head.length))
+		log.Println(err.Error())
+		return nil, err
+	}
 	n, err = reader.Read(buffer[packetHeadLen:head.length]) // receive body
 	if err != nil {
 		return nil, err

@@ -41,10 +41,15 @@ func (c *Connection) handlePacket() {
 			return
 		}
 		if packet != nil {
+			drop := true
 			for _, listenFunc := range c.listeners[packet.head.command] {
 				if listenFunc != nil {
 					(*listenFunc)(packet.body)
+					drop = false
 				}
+			}
+			if drop {
+				log.Printf("Unhandled Packet %+v\n", packet)
 			}
 		}
 	}
