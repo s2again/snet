@@ -35,15 +35,19 @@ func var2binary(values ...interface{}) (buffer *bytes.Buffer, err error) {
 	return
 }
 
-func mustBinaryRead(r io.Reader, data interface{}) {
-	err := binary.Read(r, binary.BigEndian, data)
-	if err != nil {
-		panic(err)
+func mustBinaryRead(r io.Reader, data ...interface{}) {
+	for _, d := range data {
+		err := binary.Read(r, binary.BigEndian, d)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
-func mustBinaryWrite(r io.Writer, data interface{}) {
-	err := binary.Write(r, binary.BigEndian, data)
-	if err != nil {
-		panic(err)
+func mustBinaryWrite(r io.Writer, data ...interface{}) {
+	for _, d := range data {
+		err := binary.Write(r, binary.BigEndian, d)
+		if err != nil {
+			panic(err)
+		}
 	}
 }

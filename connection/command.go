@@ -9,4 +9,7 @@ const (
 	Command_RANGE_ONLINE   Command = 106
 	Command_CREATE_ROLE    Command = 108
 	Command_SYS_ROLE       Command = 109
+
+	Command_LOGIN_IN Command = 1001
+	Command_Test     Command = 30000
 )
