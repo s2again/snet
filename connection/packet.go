@@ -52,7 +52,7 @@ func depackFromStream(reader io.Reader) (pack *packet, err error) {
 	}
 	log.Printf("Receive Body(%d bytes) %X\n", head.length-packetHeadLen, buffer[packetHeadLen:head.length])
 	var body bytes.Buffer
-	body.Write(buffer[packetHeadLen : head.length-packetHeadLen])
+	body.Write(buffer[packetHeadLen:head.length])
 	pack = &packet{
 		head: head,
 		body: packetBody(body),
