@@ -9,7 +9,7 @@ import (
 const ProtocolVersion byte = '1'
 const packetHeadLen = 17
 
-type MsgListener func(body bytes.Buffer)
+type MsgListener func(body packetBody)
 type MsgListenerID *MsgListener
 
 type Connection struct {
@@ -102,7 +102,6 @@ func (c *Connection) Send(cmd Command, body ...interface{}) error {
 	if err != nil {
 		return err
 	}
-
 	packetBin := bytes.NewBuffer(headBin.Bytes())
 	_, err = packetBin.ReadFrom(bodyBin)
 	if err != nil {

@@ -15,7 +15,21 @@ type packetHead struct {
 	userID   uint32
 	sequence int32
 }
-type packetBody = bytes.Buffer
+
+// *bytes.Buffer弱化版接口
+type packetBody interface {
+	Bytes() []byte
+	Len() int
+	Truncate(n int)
+	Read(p []byte) (n int, err error)
+	Next(n int) []byte
+	ReadByte() (byte, error)
+	ReadRune() (r rune, size int, err error)
+	UnreadRune() error
+	UnreadByte() error
+	ReadBytes(delim byte) (line []byte, err error)
+	ReadString(delim byte) (line string, err error)
+}
 type packet struct {
 	head packetHead
 	body packetBody
@@ -37,12 +51,7 @@ func depackFromStream(reader io.Reader) (pack *packet, err error) {
 		index += n
 		log.Printf("Receive Packet Pead %d/%d bytes\n", index, packetHeadLen)
 	}
-	log.Println("response bytes", buffer[:n])
-	if n != packetHeadLen {
-		log.Println("Only Receive Packet Head Bytes Length", n)
-		return nil, err
-	}
-	log.Println("Receive Head", buffer[:packetHeadLen])
+	log.Println("Packet Head: ", buffer[:packetHeadLen])
 	head, err := parseHead(bytes.NewReader(buffer[:packetHeadLen]))
 	if err != nil {
 		return nil, err
@@ -70,7 +79,7 @@ func depackFromStream(reader io.Reader) (pack *packet, err error) {
 	body.Write(buffer[packetHeadLen:head.length])
 	pack = &packet{
 		head: head,
-		body: packetBody(body),
+		body: &body,
 	}
 	return
 }

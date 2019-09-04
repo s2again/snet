@@ -15,9 +15,9 @@ func (c *Connection) SetSession(userID uint32, sessionID [16]byte) {
 
 func (c *Connection) ListOnlineServers(getCommendList func(CommendSvrInfo)) error {
 	var id MsgListenerID
-	id = c.AddListener(Command_COMMEND_ONLINE, func(body bytes.Buffer) {
+	id = c.AddListener(Command_COMMEND_ONLINE, func(body packetBody) {
 		c.RemoveListener(Command_COMMEND_ONLINE, id)
-		info, err := parseCommendSvrInfo(&body)
+		info, err := parseCommendSvrInfo(body)
 		if err != nil {
 			_ = c.Close()
 		}
@@ -45,7 +45,7 @@ type CommendSvrInfo struct {
 	// friendList []byte
 }
 
-func parseCommendSvrInfo(buffer *bytes.Buffer) (info CommendSvrInfo, err error) {
+func parseCommendSvrInfo(buffer packetBody) (info CommendSvrInfo, err error) {
 	defer func() {
 		if x := recover(); x != nil {
 			err = x.(error)
@@ -87,10 +87,10 @@ type UserInfo struct {
 
 func (c *Connection) LoginOnline(userInfoFunc func(UserInfo)) error {
 	var id MsgListenerID
-	id = c.AddListener(Command_LOGIN_IN, func(body bytes.Buffer) {
+	id = c.AddListener(Command_LOGIN_IN, func(body packetBody) {
 		c.RemoveListener(Command_LOGIN_IN, id)
 		log.Println("LoginOnline resp", body.Bytes())
-		info, err := parseUserInfoForLogin(&body)
+		info, err := parseUserInfoForLogin(body)
 		if err != nil {
 			_ = c.Close()
 		}
@@ -103,7 +103,7 @@ func (c *Connection) LoginOnline(userInfoFunc func(UserInfo)) error {
 	return nil
 }
 
-func parseUserInfoForLogin(buffer *bytes.Buffer) (info UserInfo, err error) {
+func parseUserInfoForLogin(buffer packetBody) (info UserInfo, err error) {
 	defer func() {
 		if x := recover(); x != nil {
 			err = x.(error)
@@ -264,9 +264,9 @@ func parseUserInfoForLogin(buffer *bytes.Buffer) (info UserInfo, err error) {
 }
 
 // echo测试。服务器原样回复客户端的body
-func (c *Connection) Test(parseFunc func(bytes.Buffer), data ...interface{}) {
+func (c *Connection) Test(parseFunc func(packetBody), data ...interface{}) {
 	var id MsgListenerID
-	id = c.AddListener(Command_Test, func(body bytes.Buffer) {
+	id = c.AddListener(Command_Test, func(body packetBody) {
 		c.RemoveListener(Command_Test, id)
 		log.Println("Test resp", body.Bytes())
 		parseFunc(body)
