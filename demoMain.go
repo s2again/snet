@@ -18,7 +18,7 @@ var (
 	configFile *config.ServerConfig
 	loginAddr  *net.TCPAddr
 
-	conn *connection.Connection
+	gameConn *connection.Connection
 )
 
 func init() {
@@ -68,7 +68,7 @@ func login(conn *connection.Connection, sid string) {
 		log.Printf("CommendSvrInfo %+v\n", info)
 		go func() {
 			firstOnline := info.SvrList[0]
-			conn, err = loginOnline(conn.UserID, conn.SessionID, firstOnline)
+			gameConn, err = loginOnline(conn.UserID, conn.SessionID, firstOnline)
 			if err != nil {
 				panic(err)
 			}

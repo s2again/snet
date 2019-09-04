@@ -25,10 +25,17 @@ func depackFromStream(reader io.Reader) (pack *packet, err error) {
 	const maxPacketLength = 65536
 	var buffer [maxPacketLength]byte
 
-	n, err := reader.Read(buffer[:packetHeadLen]) // receive head
-	if err != nil {
-		log.Println(err)
-		return nil, err
+	index := 0
+
+	for index != packetHeadLen {
+		n, err := reader.Read(buffer[index:packetHeadLen]) // receive head
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+		log.Println("response bytes", buffer[:n])
+		index += n
+		log.Printf("Receive Packet Pead %d/%d bytes\n", index, packetHeadLen)
 	}
 	log.Println("response bytes", buffer[:n])
 	if n != packetHeadLen {
@@ -46,11 +53,19 @@ func depackFromStream(reader io.Reader) (pack *packet, err error) {
 		log.Println(err.Error())
 		return nil, err
 	}
-	n, err = reader.Read(buffer[packetHeadLen:head.length]) // receive body
-	if err != nil {
-		return nil, err
+
+	// index == packetHeadLen
+	bodyLen := head.length - packetHeadLen
+	for index != int(head.length) {
+		n, err := reader.Read(buffer[index:head.length]) // receive body
+		if err != nil {
+			log.Println(err.Error())
+			return nil, err
+		}
+		index += n
+		log.Printf("Receive Body %d/%d bytes \n", index-packetHeadLen, bodyLen)
 	}
-	log.Printf("Receive Body(%d bytes) %X\n", head.length-packetHeadLen, buffer[packetHeadLen:head.length])
+	log.Printf("Packet Body (total %d bytes) %X\n", bodyLen, buffer[packetHeadLen:head.length])
 	var body bytes.Buffer
 	body.Write(buffer[packetHeadLen:head.length])
 	pack = &packet{
