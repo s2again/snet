@@ -36,12 +36,6 @@ func init() {
 }
 
 func main() {
-	conn, err := connection.Connect(loginAddr)
-	if err != nil {
-		panic(err)
-	}
-	defer conn.Close()
-
 	// Login
 	var sid string
 	fmt.Println("Input SID:")
@@ -52,6 +46,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	conn, err := connection.Connect(loginAddr)
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+
 	login(conn, sid)
 	fmt.Printf("userID: %v sessionID: %v\n", conn.UserID, conn.SessionID)
 
