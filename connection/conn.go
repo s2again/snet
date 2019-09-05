@@ -51,41 +51,57 @@ func (c *Connection) handlePacket() {
 			return
 		}
 		if packet != nil {
-			drop := true
-
 			// find listeners
-			c.listenersLock.RLock()
-			var matchListeners []*MsgListener
-			for _, listenFunc := range c.listeners[packet.head.command] {
-				if listenFunc != nil {
-					// 先保存，解锁后再调用。如果直接调用，因为用户函数可能调用本库其他函数，造成重复锁而死锁
-					matchListeners = append(matchListeners, listenFunc)
-					drop = false
-				}
-			}
-			c.listenersLock.RUnlock()
-			for _, f := range matchListeners {
+			listeners := c.matchListeners(packet.head.command)
+			for _, f := range listeners {
 				(*f)(packet.body)
 			}
 			// find promise
-			c.responsePromisesLock.Lock()
-			val, found := c.responsePromises.Get(packet.head.command)
-			if found {
-				drop = false
-				promDeque := val.(*deque.Deque)
-				val, has := promDeque.PopFront()
-				if has {
-					prom := val.(*promise.Promise)
-					_ = prom.Resolve(packet.body)
+			firstPromise := c.firstPromise(packet.head.command)
+			if firstPromise != nil {
+				err := firstPromise.Resolve(packet.body)
+				if err != nil {
+					log.Println("Resolve Promise Failed: ", err)
 				}
 			}
-			c.responsePromisesLock.Unlock()
 
+			drop := len(listeners) == 0 && firstPromise == nil
 			if drop {
 				log.Printf("Unhandled Packet %+v\n", packet)
 			}
 		}
 	}
+}
+
+// Get all the listeners that match command
+func (c *Connection) matchListeners(cmd Command) []*MsgListener {
+	c.listenersLock.RLock()
+	defer c.listenersLock.RUnlock()
+	var matchListeners []*MsgListener
+	for _, listenFunc := range c.listeners[cmd] {
+		if listenFunc != nil {
+			// 先保存，解锁后再调用。如果直接调用，因为用户函数可能调用本库其他函数，造成重复锁而死锁
+			matchListeners = append(matchListeners, listenFunc)
+		}
+	}
+	return matchListeners
+}
+
+// Get the first promise in the queue correlate with cmd,
+// and remove first promise from the queue.
+func (c *Connection) firstPromise(cmd Command) *promise.Promise {
+	c.responsePromisesLock.Lock()
+	defer c.responsePromisesLock.Unlock()
+	val, found := c.responsePromises.Get(cmd)
+	if !found {
+		return nil
+	}
+	promDeque := val.(*deque.Deque)
+	val, has := promDeque.PopFront()
+	if !has {
+		return nil
+	}
+	return val.(*promise.Promise)
 }
 
 func (c *Connection) Close() error {
