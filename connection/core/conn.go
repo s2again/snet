@@ -1,4 +1,5 @@
-package connection
+// Implements Taomee Network Protocol
+package core
 
 import (
 	"bytes"
@@ -14,7 +15,7 @@ import (
 const ProtocolVersion byte = '1'
 const packetHeadLen = 17
 
-type MsgListener func(body packetBody)
+type MsgListener func(body PacketBody)
 type MsgListenerID *MsgListener
 
 type Connection struct {
@@ -42,6 +43,11 @@ func Connect(addr *net.TCPAddr) (conn *Connection, err error) {
 	conn.responsePromises.Clear()
 	go conn.handlePacket()
 	return
+}
+
+// 当前不校验session有效性，因此调用者自行保证其有效性。
+func (c *Connection) SetSession(userID uint32, sessionID [16]byte) {
+	c.UserID, c.SessionID = userID, sessionID
 }
 
 func (c *Connection) handlePacket() {
@@ -144,7 +150,7 @@ func (c *Connection) Send(cmd Command, body ...interface{}) error {
 	if cmd > 1000 {
 		c.sequence++
 	}
-	head := packetHead{
+	head := PacketHead{
 		length:   packetHeadLen + uint32(bodyBin.Len()),
 		version:  ProtocolVersion,
 		command:  cmd,

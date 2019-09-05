@@ -1,15 +1,16 @@
 package connection
 
-type Command = uint32
+import "main/connection/core"
 
+//noinspection GoUnusedConst,GoSnakeCaseUsage
 const (
-	Command_GET_VERIFCODE  Command = 101
-	Command_MAIN_LOGIN_IN  Command = 103
-	Command_COMMEND_ONLINE Command = 105
-	Command_RANGE_ONLINE   Command = 106
-	Command_CREATE_ROLE    Command = 108
-	Command_SYS_ROLE       Command = 109
+	Command_GET_VERIFCODE  core.Command = 101
+	Command_MAIN_LOGIN_IN  core.Command = 103
+	Command_COMMEND_ONLINE core.Command = 105
+	Command_RANGE_ONLINE   core.Command = 106
+	Command_CREATE_ROLE    core.Command = 108
+	Command_SYS_ROLE       core.Command = 109
 
-	Command_LOGIN_IN Command = 1001
-	Command_Test     Command = 30000
+	Command_LOGIN_IN core.Command = 1001
+	Command_Test     core.Command = 30000
 )

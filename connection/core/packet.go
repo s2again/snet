@@ -1,4 +1,4 @@
-package connection
+package core
 
 import (
 	"bytes"
@@ -8,7 +8,9 @@ import (
 	"log"
 )
 
-type packetHead struct {
+type Command = uint32
+
+type PacketHead struct {
 	length   uint32
 	version  byte
 	command  Command
@@ -17,7 +19,7 @@ type packetHead struct {
 }
 
 // *bytes.Buffer弱化版接口
-type packetBody interface {
+type PacketBody interface {
 	Bytes() []byte
 	Len() int
 	Truncate(n int)
@@ -30,12 +32,12 @@ type packetBody interface {
 	ReadBytes(delim byte) (line []byte, err error)
 	ReadString(delim byte) (line string, err error)
 }
-type packet struct {
-	head packetHead
-	body packetBody
+type Packet struct {
+	head PacketHead
+	body PacketBody
 }
 
-func depackFromStream(reader io.Reader) (pack *packet, err error) {
+func depackFromStream(reader io.Reader) (pack *Packet, err error) {
 	const maxPacketLength = 65536
 	var buffer [maxPacketLength]byte
 
@@ -77,24 +79,24 @@ func depackFromStream(reader io.Reader) (pack *packet, err error) {
 	log.Printf("Packet Body (total %d bytes) %X\n", bodyLen, buffer[packetHeadLen:head.length])
 	var body bytes.Buffer
 	body.Write(buffer[packetHeadLen:head.length])
-	pack = &packet{
+	pack = &Packet{
 		head: head,
 		body: &body,
 	}
 	return
 }
 
-func parseHead(input *bytes.Reader) (head packetHead, err error) {
+func parseHead(input *bytes.Reader) (head PacketHead, err error) {
 	defer func() {
 		if x := recover(); x != nil {
 			err = x.(error)
 			return
 		}
 	}()
-	mustBinaryRead(input, &head.length)
-	mustBinaryRead(input, &head.version)
-	mustBinaryRead(input, &head.command)
-	mustBinaryRead(input, &head.userID)
-	mustBinaryRead(input, &head.sequence)
+	MustBinaryRead(input, &head.length)
+	MustBinaryRead(input, &head.version)
+	MustBinaryRead(input, &head.command)
+	MustBinaryRead(input, &head.userID)
+	MustBinaryRead(input, &head.sequence)
 	return
 }

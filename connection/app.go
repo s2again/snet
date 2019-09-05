@@ -1,21 +1,32 @@
+// Implements classicalSeer
 package connection
 
 import (
 	"bytes"
 	"log"
+	"net"
 	"time"
+
+	"main/connection/core"
 )
 
 const gameChannel uint32 = 0
 
-// 当前不校验session有效性，因此调用者自行保证其有效性。
-func (c *Connection) SetSession(userID uint32, sessionID [16]byte) {
-	c.UserID, c.SessionID = userID, sessionID
+type Connection struct {
+	*core.Connection
+}
+
+func Connect(addr *net.TCPAddr) (conn *Connection, err error) {
+	coreConn, err := core.Connect(addr)
+	if err != nil {
+		return nil, err
+	}
+	return &Connection{coreConn}, nil
 }
 
 func (c *Connection) ListOnlineServers(getCommendList func(CommendSvrInfo)) error {
-	var id MsgListenerID
-	id = c.AddListener(Command_COMMEND_ONLINE, func(body packetBody) {
+	var id core.MsgListenerID
+	id = c.AddListener(Command_COMMEND_ONLINE, func(body core.PacketBody) {
 		c.RemoveListener(Command_COMMEND_ONLINE, id)
 		info, err := parseCommendSvrInfo(body)
 		if err != nil {
@@ -45,7 +56,7 @@ type CommendSvrInfo struct {
 	// friendList []byte
 }
 
-func parseCommendSvrInfo(buffer packetBody) (info CommendSvrInfo, err error) {
+func parseCommendSvrInfo(buffer core.PacketBody) (info CommendSvrInfo, err error) {
 	defer func() {
 		if x := recover(); x != nil {
 			err = x.(error)
@@ -53,21 +64,21 @@ func parseCommendSvrInfo(buffer packetBody) (info CommendSvrInfo, err error) {
 		}
 	}()
 	log.Println("Command_COMMEND_ONLINE response bytes", buffer.Bytes())
-	mustBinaryRead(buffer, &info.MaxOnlineID)
-	mustBinaryRead(buffer, &info.IsVIP)
-	mustBinaryRead(buffer, &info.OnlineCnt)
+	core.MustBinaryRead(buffer, &info.MaxOnlineID)
+	core.MustBinaryRead(buffer, &info.IsVIP)
+	core.MustBinaryRead(buffer, &info.OnlineCnt)
 	log.Println("OnlineCnt", info.OnlineCnt)
 	info.SvrList = make([]OnlineServerInfo, info.OnlineCnt)
 	for i := uint32(0); i < info.OnlineCnt; i++ {
-		mustBinaryRead(buffer, &info.SvrList[i].OnlineID)
-		mustBinaryRead(buffer, &info.SvrList[i].UserCnt)
+		core.MustBinaryRead(buffer, &info.SvrList[i].OnlineID)
+		core.MustBinaryRead(buffer, &info.SvrList[i].UserCnt)
 		{
 			var ipBin [16]byte
-			mustBinaryRead(buffer, &ipBin)
+			core.MustBinaryRead(buffer, &ipBin)
 			info.SvrList[i].IP = string(bytes.Trim(ipBin[:], "\u0000"))
 		}
-		mustBinaryRead(buffer, &info.SvrList[i].Port)
-		mustBinaryRead(buffer, &info.SvrList[i].Friends)
+		core.MustBinaryRead(buffer, &info.SvrList[i].Port)
+		core.MustBinaryRead(buffer, &info.SvrList[i].Friends)
 	}
 	return
 }
@@ -86,9 +97,9 @@ type UserInfo struct {
 }
 
 func (c *Connection) LoginOnline(userInfoFunc func(UserInfo)) error {
-	var id MsgListenerID
-	id = c.AddListener(Command_LOGIN_IN, func(body packetBody) {
-		c.RemoveListener(Command_LOGIN_IN, id)
+	var id core.MsgListenerID
+	id = c.Connection.AddListener(Command_LOGIN_IN, func(body core.PacketBody) {
+		c.Connection.RemoveListener(Command_LOGIN_IN, id)
 		log.Println("LoginOnline resp", body.Bytes())
 		info, err := parseUserInfoForLogin(body)
 		if err != nil {
@@ -103,7 +114,7 @@ func (c *Connection) LoginOnline(userInfoFunc func(UserInfo)) error {
 	return nil
 }
 
-func parseUserInfoForLogin(buffer packetBody) (info UserInfo, err error) {
+func parseUserInfoForLogin(buffer core.PacketBody) (info UserInfo, err error) {
 	defer func() {
 		if x := recover(); x != nil {
 			err = x.(error)
@@ -126,15 +137,15 @@ func parseUserInfoForLogin(buffer packetBody) (info UserInfo, err error) {
 		dailyRes                                                     [50]byte
 		// ...
 	)
-	mustBinaryRead(buffer, &userID, &regTime, &nick)
-	mustBinaryRead(buffer, &vipInfo, &dsFlag)
-	mustBinaryRead(buffer, &color, &texture, &energy, &coins, &fightBadge)
-	mustBinaryRead(buffer, &mapID, &posX, &posY)
-	mustBinaryRead(buffer, &timeToday, &timeLimit)
-	mustBinaryRead(buffer, &isClothHalfDay, &isRoomHalfDay, &iFortressHalfDay, &isHQHalfDay)
-	mustBinaryRead(buffer, &loginCnt, &inviter, &newInviteeCnt)
-	mustBinaryRead(buffer, &vipLevel, &vipValue, &vipStage, &autoCharge, &vipEndTime)
-	mustBinaryRead(buffer, &freshManBonus, &nonoChipList, &dailyRes)
+	core.MustBinaryRead(buffer, &userID, &regTime, &nick)
+	core.MustBinaryRead(buffer, &vipInfo, &dsFlag)
+	core.MustBinaryRead(buffer, &color, &texture, &energy, &coins, &fightBadge)
+	core.MustBinaryRead(buffer, &mapID, &posX, &posY)
+	core.MustBinaryRead(buffer, &timeToday, &timeLimit)
+	core.MustBinaryRead(buffer, &isClothHalfDay, &isRoomHalfDay, &iFortressHalfDay, &isHQHalfDay)
+	core.MustBinaryRead(buffer, &loginCnt, &inviter, &newInviteeCnt)
+	core.MustBinaryRead(buffer, &vipLevel, &vipValue, &vipStage, &autoCharge, &vipEndTime)
+	core.MustBinaryRead(buffer, &freshManBonus, &nonoChipList, &dailyRes)
 	return UserInfo{
 		UserID:  userID,
 		RegTime: time.Unix(int64(regTime), 0),
@@ -264,9 +275,9 @@ func parseUserInfoForLogin(buffer packetBody) (info UserInfo, err error) {
 }
 
 // echo测试。服务器原样回复客户端的body
-func (c *Connection) Test(parseFunc func(packetBody), data ...interface{}) {
-	var id MsgListenerID
-	id = c.AddListener(Command_Test, func(body packetBody) {
+func (c *Connection) Test(parseFunc func(core.PacketBody), data ...interface{}) {
+	var id core.MsgListenerID
+	id = c.AddListener(Command_Test, func(body core.PacketBody) {
 		c.RemoveListener(Command_Test, id)
 		log.Println("Test resp", body.Bytes())
 		parseFunc(body)
