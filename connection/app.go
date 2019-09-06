@@ -24,20 +24,21 @@ func Connect(addr *net.TCPAddr) (conn *Connection, err error) {
 	return &Connection{coreConn}, nil
 }
 
-func (c *Connection) ListOnlineServers(getCommendList func(CommendSvrInfo)) error {
-	var id core.MsgListenerID
-	id = c.AddListener(Command_COMMEND_ONLINE, func(body core.PacketBody) {
-		c.RemoveListener(Command_COMMEND_ONLINE, id)
-		info, err := parseCommendSvrInfo(body)
-		if err != nil {
-			_ = c.Close()
-		}
-		getCommendList(info)
-	})
-	err := c.Send(Command_COMMEND_ONLINE, c.SessionID, gameChannel)
+func (c *Connection) ListOnlineServers(callback func(CommendSvrInfo)) error {
+	prom, err := c.SendForPromise(Command_COMMEND_ONLINE, c.SessionID, gameChannel)
 	if err != nil {
 		return err
 	}
+	prom.OnSuccess(func(v interface{}) {
+		list, err := parseCommendSvrInfo(v.(core.PacketBody))
+		if err != nil {
+			c.Close()
+			log.Println("parseCommendSvrInfo error: ", v, "connection terminated.")
+		}
+		callback(list)
+	}).OnFailure(func(v interface{}) {
+		log.Println("ListOnlineServers promise rejected: ", v)
+	})
 	return nil
 }
 
@@ -97,20 +98,20 @@ type UserInfo struct {
 }
 
 func (c *Connection) LoginOnline(userInfoFunc func(UserInfo)) error {
-	var id core.MsgListenerID
-	id = c.Connection.AddListener(Command_LOGIN_IN, func(body core.PacketBody) {
-		c.Connection.RemoveListener(Command_LOGIN_IN, id)
-		log.Println("LoginOnline resp", body.Bytes())
-		info, err := parseUserInfoForLogin(body)
-		if err != nil {
-			_ = c.Close()
-		}
-		userInfoFunc(info)
-	})
-	err := c.Send(Command_LOGIN_IN, c.SessionID)
+	prom, err := c.SendForPromise(Command_LOGIN_IN, c.SessionID)
 	if err != nil {
 		return err
 	}
+	prom.OnSuccess(func(v interface{}) {
+		info, err := parseUserInfoForLogin(v.(core.PacketBody))
+		if err != nil {
+			c.Close()
+			log.Println("parseCommendSvrInfo error: ", v, "connection terminated.")
+		}
+		userInfoFunc(info)
+	}).OnFailure(func(v interface{}) {
+		log.Println("LoginOnline promise rejected: ", v)
+	})
 	return nil
 }
 
@@ -275,15 +276,15 @@ func parseUserInfoForLogin(buffer core.PacketBody) (info UserInfo, err error) {
 }
 
 // echo测试。服务器原样回复客户端的body
-func (c *Connection) Test(parseFunc func(core.PacketBody), data ...interface{}) {
-	var id core.MsgListenerID
-	id = c.AddListener(Command_Test, func(body core.PacketBody) {
-		c.RemoveListener(Command_Test, id)
-		log.Println("Test resp", body.Bytes())
-		parseFunc(body)
-	})
-	err := c.Send(Command_Test, data...)
+func (c *Connection) Test(parseFunc func(core.PacketBody), data ...interface{}) error {
+	prom, err := c.SendForPromise(Command_Test, data...)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	prom.OnSuccess(func(v interface{}) {
+		parseFunc(v.(core.PacketBody))
+	}).OnFailure(func(v interface{}) {
+		log.Println("Test promise rejected: ", v)
+	})
+	return nil
 }
