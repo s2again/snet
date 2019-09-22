@@ -11,6 +11,7 @@ const (
 	Command_CREATE_ROLE    core.Command = 108
 	Command_SYS_ROLE       core.Command = 109
 
-	Command_LOGIN_IN core.Command = 1001
-	Command_Test     core.Command = 30000
+	Command_LOGIN_IN      core.Command = 1001
+	Command_COMPLETE_TASK core.Command = 2202
+	Command_Test          core.Command = 30000
 )

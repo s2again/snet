@@ -20,3 +20,11 @@ func Connect(addr *net.TCPAddr) (conn *Connection, err error) {
 	}
 	return &Connection{coreConn}, nil
 }
+
+func (c *Connection) FinishTask(taskID int32) error {
+	err := c.Send(Command_COMPLETE_TASK, taskID, 1)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -56,7 +56,15 @@ func main() {
 	login(conn, sid)
 	fmt.Printf("userID: %v sessionID: %v\n", conn.UserID, conn.SessionID)
 
+	completeTasks(conn)
 	select {}
+}
+
+func completeTasks(conn *connection.Connection) {
+	err := conn.FinishTask(304)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func login(conn *connection.Connection, sid string) {
