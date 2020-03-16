@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"log"
 
+	"github.com/fanliao/go-promise"
+
 	"main/connection/core"
 )
 
@@ -22,21 +24,33 @@ type CommendSvrInfo struct {
 	// friendList []byte
 }
 
-func (c *Connection) ListOnlineServers(callback func(CommendSvrInfo)) error {
-	prom, err := c.SendForPromise(Command_COMMEND_ONLINE, c.SessionID, gameChannel)
+func (c *Connection) ListOnlineServers() *promise.Promise {
+	prom := promise.NewPromise()
+	c.SendInPromise(Command_COMMEND_ONLINE, c.SessionID, gameChannel).OnSuccess(func(v interface{}) {
+		list, err := parseCommendSvrInfo(v.(core.PacketBody))
+		if err != nil {
+			log.Println("parseCommendSvrInfo error: ", err, "connection terminated.")
+			prom.Reject(err)
+			return
+		}
+		prom.Resolve(list)
+	}).OnFailure(func(v interface{}) {
+		log.Println("ListOnlineServersAndCallback rejected: ", v)
+		prom.Reject(v.(error))
+	})
+	return prom
+}
+
+func (c *Connection) ListOnlineServersAndCallback(callback func(CommendSvrInfo)) error {
+	v, err := c.SendInPromise(Command_COMMEND_ONLINE, c.SessionID, gameChannel).Get()
 	if err != nil {
 		return err
 	}
-	prom.OnSuccess(func(v interface{}) {
-		list, err := parseCommendSvrInfo(v.(core.PacketBody))
-		if err != nil {
-			c.Close()
-			log.Println("parseCommendSvrInfo error: ", v, "connection terminated.")
-		}
-		callback(list)
-	}).OnFailure(func(v interface{}) {
-		log.Println("ListOnlineServers promise rejected: ", v)
-	})
+	list, err := parseCommendSvrInfo(v.(core.PacketBody))
+	if err != nil {
+		log.Println("parseCommendSvrInfo error: ", err, "connection terminated.")
+	}
+	callback(list)
 	return nil
 }
 

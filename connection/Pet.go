@@ -1,0 +1,150 @@
+package connection
+
+import (
+	"log"
+
+	"github.com/fanliao/go-promise"
+
+	"main/connection/core"
+)
+
+// com.robot.core.info.pet.PetInfo
+type PetInfo struct {
+	ID          uint32
+	Name        string
+	Dv          uint32
+	Nature      uint32
+	Level       uint32
+	Exp         uint32
+	LvExp       uint32
+	NextLvExp   uint32
+	HP          uint32
+	MaxHP       uint32
+	Attack      uint32
+	Defence     uint32
+	SpAttack    uint32
+	SpDefence   uint32
+	Speed       uint32
+	EvHP        uint32
+	EvAttack    uint32
+	EvDefence   uint32
+	EvSpAttack  uint32
+	EvSpDefence uint32
+	EvSpeed     uint32
+	SkillNum    uint32
+	SkillList   []PetSkillInfo
+	CatchTime   uint32
+	CatchMap    uint32
+	CatchRect   uint32
+	CatchLevel  uint32
+	EffectCount uint16
+	EffectList  []PetEffectInfo
+}
+
+func (c *Connection) ReleasePet(catchTime uint32, flag uint32) *promise.Promise {
+	return c.SendInPromise(Command_PET_RELEASE, catchTime, flag) // TODO: parse the body
+}
+
+func (c *Connection) GetPetInfo(catchTime uint32) (p *promise.Promise) {
+	p = promise.NewPromise()
+	c.SendInPromise(Command_GET_PET_INFO, catchTime).
+		OnSuccess(func(v interface{}) {
+			info, err := parsePetInfo(v.(core.PacketBody))
+			if err != nil {
+				p.Reject(err)
+			} else {
+				p.Resolve(info)
+			}
+		}).
+		OnFailure(func(v interface{}) {
+			p.Reject(v.(error))
+		})
+	return p
+}
+
+func (c *Connection) GetPetList() (p *promise.Promise) {
+	p = promise.NewPromise()
+	c.SendInPromise(Command_GET_PET_LIST).
+		OnSuccess(func(v interface{}) {
+			defer func() {
+				if x := recover(); x != nil {
+					p.Reject(x.(error))
+				}
+			}()
+			buffer := v.(core.PacketBody)
+			var len uint32
+			core.MustBinaryRead(buffer, &len)
+			petList := make([]PetListInfo, len)
+			for i := uint32(0); i < len; i++ {
+				var err error
+				petList[i], err = parsePetListInfo(buffer)
+				if err != nil {
+					p.Reject(v.(error))
+					return
+				}
+			}
+			p.Resolve(petList)
+		}).
+		OnFailure(func(v interface{}) {
+			p.Reject(v.(error))
+		})
+	return p
+}
+
+// com.robot.core.info.pet.PetInfo
+func parsePetInfo(buffer core.PacketBody) (info PetInfo, err error) {
+	defer func() {
+		if x := recover(); x != nil {
+			err = x.(error)
+			return
+		}
+	}()
+	log.Println("parsePetInfo", buffer.Bytes())
+	core.MustBinaryRead(buffer, &info.ID)
+	{
+		var name [16]byte
+		core.MustBinaryRead(buffer, &name)
+		info.Name = string(name[:16])
+	}
+	core.MustBinaryRead(buffer, &info.Dv)
+	core.MustBinaryRead(buffer, &info.Nature)
+	core.MustBinaryRead(buffer, &info.Level)
+	core.MustBinaryRead(buffer, &info.Exp)
+	core.MustBinaryRead(buffer, &info.LvExp)
+	core.MustBinaryRead(buffer, &info.NextLvExp)
+	core.MustBinaryRead(buffer, &info.HP)
+	core.MustBinaryRead(buffer, &info.MaxHP)
+	core.MustBinaryRead(buffer, &info.Attack)
+	core.MustBinaryRead(buffer, &info.Defence)
+	core.MustBinaryRead(buffer, &info.SpAttack)
+	core.MustBinaryRead(buffer, &info.SpDefence)
+	core.MustBinaryRead(buffer, &info.Speed)
+	core.MustBinaryRead(buffer, &info.EvHP)
+	core.MustBinaryRead(buffer, &info.EvAttack)
+	core.MustBinaryRead(buffer, &info.EvDefence)
+	core.MustBinaryRead(buffer, &info.EvSpAttack)
+	core.MustBinaryRead(buffer, &info.EvSpDefence)
+	core.MustBinaryRead(buffer, &info.EvSpeed)
+	core.MustBinaryRead(buffer, &info.SkillNum)
+	info.SkillList = make([]PetSkillInfo, 4)
+	for i := 0; i < len(info.SkillList); i++ {
+		info.SkillList[i], err = parsePetSkillInfo(buffer)
+		if err != nil {
+			panic(err)
+		}
+	}
+	info.SkillList = info.SkillList[:info.SkillNum]
+	core.MustBinaryRead(buffer, &info.CatchTime)
+	core.MustBinaryRead(buffer, &info.CatchMap)
+	core.MustBinaryRead(buffer, &info.CatchRect)
+	core.MustBinaryRead(buffer, &info.Level)
+	core.MustBinaryRead(buffer, &info.EffectCount)
+	info.EffectList = make([]PetEffectInfo, info.EffectCount)
+	for i := uint16(0); i < info.EffectCount; i++ {
+		info.EffectList[i], err = parsePetEffectInfo(buffer)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return info, nil
+}

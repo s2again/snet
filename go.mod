@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/emirpasic/gods v1.12.0
 	github.com/fanliao/go-promise v0.0.0-20141029170127-1890db352a72
+	github.com/inkedawn/go-vBrowser v0.0.0-20190809115438-dba8f2088797
 	github.com/juju/clock v0.0.0-20190205081909-9c5c9712527c // indirect
 	github.com/juju/errors v0.0.0-20190806202954-0232dcc7464d // indirect
 	github.com/juju/loggo v0.0.0-20190526231331-6e530bcce5d8 // indirect

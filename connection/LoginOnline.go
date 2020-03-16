@@ -5,10 +5,12 @@ import (
 	"log"
 	"time"
 
+	"github.com/fanliao/go-promise"
+
 	"main/connection/core"
 )
 
-type UserInfo struct {
+type ResponseForLogin struct {
 	UserID                                                        uint32
 	RegTime                                                       time.Time
 	Nick                                                          string
@@ -21,25 +23,38 @@ type UserInfo struct {
 	LoginCnt                                                      uint32
 }
 
-func (c *Connection) LoginOnline(userInfoFunc func(UserInfo)) error {
-	prom, err := c.SendForPromise(Command_LOGIN_IN, c.SessionID)
+func (c *Connection) LoginOnline() *promise.Promise {
+	prom := promise.NewPromise()
+	c.SendInPromise(Command_LOGIN_IN, c.SessionID).OnSuccess(func(v interface{}) {
+		info, err := parseUserInfoForLogin(v.(core.PacketBody))
+		if err != nil {
+			log.Println("parseCommendSvrInfo error: ", err)
+			prom.Reject(err)
+			return
+		}
+		prom.Resolve(info)
+	}).OnFailure(func(v interface{}) {
+		log.Println("LoginOnlineAndCallback promise rejected: ", v)
+		prom.Reject(v.(error))
+	})
+	return prom
+}
+
+func (c *Connection) LoginOnlineAndCallback(callback func(ResponseForLogin)) error {
+	body, err := c.SendInPromise(Command_LOGIN_IN, c.SessionID).Get()
 	if err != nil {
 		return err
 	}
-	prom.OnSuccess(func(v interface{}) {
-		info, err := parseUserInfoForLogin(v.(core.PacketBody))
-		if err != nil {
-			c.Close()
-			log.Println("parseCommendSvrInfo error: ", v, "connection terminated.")
-		}
-		userInfoFunc(info)
-	}).OnFailure(func(v interface{}) {
-		log.Println("LoginOnline promise rejected: ", v)
-	})
+	info, err := parseUserInfoForLogin(body.(core.PacketBody))
+	if err != nil {
+		log.Println("parseCommendSvrInfo error: ", err, "connection terminated.")
+		return err
+	}
+	callback(info)
 	return nil
 }
 
-func parseUserInfoForLogin(buffer core.PacketBody) (info UserInfo, err error) {
+func parseUserInfoForLogin(buffer core.PacketBody) (info ResponseForLogin, err error) {
 	defer func() {
 		if x := recover(); x != nil {
 			err = x.(error)
@@ -71,7 +86,7 @@ func parseUserInfoForLogin(buffer core.PacketBody) (info UserInfo, err error) {
 	core.MustBinaryRead(buffer, &loginCnt, &inviter, &newInviteeCnt)
 	core.MustBinaryRead(buffer, &vipLevel, &vipValue, &vipStage, &autoCharge, &vipEndTime)
 	core.MustBinaryRead(buffer, &freshManBonus, &nonoChipList, &dailyRes)
-	return UserInfo{
+	return ResponseForLogin{
 		UserID:  userID,
 		RegTime: time.Unix(int64(regTime), 0),
 		Nick:    string(bytes.Trim(nick[:], "\u0000")),

@@ -3,10 +3,13 @@ package core
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
+	"errors"
 	"io"
+	"strconv"
 )
 
-func head2binary(head PacketHead) (buffer *bytes.Buffer, err error) {
+func head2binary(head SendPacketHead) (buffer *bytes.Buffer, err error) {
 	defer func() {
 		if x := recover(); x != nil {
 			err = x.(error)
@@ -21,6 +24,7 @@ func head2binary(head PacketHead) (buffer *bytes.Buffer, err error) {
 	MustBinaryWrite(buffer, head.sequence)
 	return
 }
+
 func var2binary(values ...interface{}) (buffer *bytes.Buffer, err error) {
 	defer func() {
 		if x := recover(); x != nil {
@@ -50,4 +54,20 @@ func MustBinaryWrite(r io.Writer, data ...interface{}) {
 			panic(err)
 		}
 	}
+}
+
+func ParseSIDString(sid string) (userID uint32, session [16]byte, err error) {
+	if len(sid) != 40 {
+		err = errors.New("illegal sid length")
+		return
+	}
+	userIDtmp, err := strconv.ParseUint(sid[:8], 16, 32)
+	userID = uint32(userIDtmp)
+
+	sessiontmp, err := hex.DecodeString(sid[8:40])
+	if err != nil {
+		return
+	}
+	copy(session[:], sessiontmp[:32])
+	return
 }

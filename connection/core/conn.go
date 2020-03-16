@@ -3,8 +3,10 @@ package core
 
 import (
 	"bytes"
+	"errors"
 	"log"
 	"net"
+	"strconv"
 	"sync"
 
 	"github.com/emirpasic/gods/maps/hashmap"
@@ -65,12 +67,18 @@ func (c *Connection) handlePacket() {
 			// find promise
 			firstPromise := c.firstPromise(packet.head.command)
 			if firstPromise != nil {
-				err := firstPromise.Resolve(packet.body)
-				if err != nil {
-					log.Println("Resolve Promise Failed: ", err)
+				if packet.head.errno != 0 {
+					err := firstPromise.Reject(errors.New("Errno" + strconv.Itoa(int(packet.head.errno))))
+					if err != nil {
+						log.Println("Reject Promise Failed: ", err)
+					}
+				} else {
+					err := firstPromise.Resolve(packet.body)
+					if err != nil {
+						log.Println("Resolve Promise Failed: ", err)
+					}
 				}
 			}
-
 			drop := len(listeners) == 0 && firstPromise == nil
 			if drop {
 				log.Printf("Unhandled Packet %+v\n", packet)
@@ -150,7 +158,7 @@ func (c *Connection) Send(cmd Command, body ...interface{}) error {
 	if cmd > 1000 {
 		c.sequence++
 	}
-	head := PacketHead{
+	head := SendPacketHead{
 		length:   packetHeadLen + uint32(bodyBin.Len()),
 		version:  ProtocolVersion,
 		command:  cmd,
@@ -174,6 +182,7 @@ func (c *Connection) Send(cmd Command, body ...interface{}) error {
 	return nil
 }
 
+// DEPRECATED:
 // data must be fixed-size type
 // err only reports errors in sending operation. Use promise.OnFailure if you want to check response errors
 func (c *Connection) SendForPromise(cmd Command, body ...interface{}) (responsePromise *promise.Promise, err error) {
@@ -191,5 +200,27 @@ func (c *Connection) SendForPromise(cmd Command, body ...interface{}) (responseP
 	responsePromise = promise.NewPromise()
 	promDeque := val.(*deque.Deque)
 	promDeque.PushBack(responsePromise)
+	return
+}
+
+// data must be fixed-size type
+// all errors will be reported via promise. Use promise.OnFailure if you want to check errors
+//
+func (c *Connection) SendInPromise(cmd Command, body ...interface{}) (responsePromise *promise.Promise) {
+	responsePromise = promise.NewPromise()
+	c.responsePromisesLock.Lock()
+	defer c.responsePromisesLock.Unlock()
+	log.Printf("send body: %X\n", body)
+	err := c.Send(cmd, body...)
+	if err != nil {
+		responsePromise.Reject(err)
+		return
+	}
+	promDeque, found := c.responsePromises.Get(cmd)
+	if !found {
+		promDeque = deque.New()
+		c.responsePromises.Put(cmd, promDeque)
+	}
+	promDeque.(*deque.Deque).PushBack(responsePromise)
 	return
 }

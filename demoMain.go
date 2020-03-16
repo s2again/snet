@@ -3,12 +3,10 @@
 package main
 
 import (
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"log"
 	"net"
-	"strconv"
+	"os"
 
 	"main/config"
 	"main/connection"
@@ -17,12 +15,12 @@ import (
 var (
 	configFile *config.ServerConfig
 	loginAddr  *net.TCPAddr
-
-	gameConn *connection.Connection
 )
 
 func init() {
 	var err error
+	f, err := os.OpenFile("seer.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
+	log.SetOutput(f)
 	configFile, err = config.GetServerConfig()
 	if err != nil {
 		panic(err)
@@ -47,78 +45,37 @@ func main() {
 		panic(err)
 	}
 
-	conn, err := connection.Connect(loginAddr)
+	loginConn, err := connection.Connect(loginAddr)
 	if err != nil {
 		panic(err)
 	}
-	defer conn.Close()
+	conn, err := login(loginConn, sid)
+	loginConn.Close()
+	fmt.Printf("userID: %v sessionID: %v\n", loginConn.UserID, loginConn.SessionID)
 
-	login(conn, sid)
-	fmt.Printf("userID: %v sessionID: %v\n", conn.UserID, conn.SessionID)
-
-	completeTasks(conn)
+	petlist := mustResolvePromise(conn.GetPetList())
+	fmt.Printf("精灵列表： \n")
+	for _, pet := range petlist.([]connection.PetListInfo) {
+		fmt.Printf("%+v\n", pet)
+	}
+	for _, pet := range petlist.([]connection.PetListInfo) {
+		petinfo := mustResolvePromise(conn.GetPetInfo(pet.CatchTime))
+		fmt.Printf("%+v\n", petinfo)
+	}
 	select {}
 }
 
-func completeTasks(conn *connection.Connection) {
-	err := conn.FinishTask(304)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func login(conn *connection.Connection, sid string) {
+func login(loginConn *connection.Connection, sid string) (conn *connection.Connection, err error) {
 	userID, session, err := parseSID(sid)
 	if err != nil {
 		panic(err)
 	}
-	conn.SetSession(userID, session)
-	err = conn.ListOnlineServers(func(info connection.CommendSvrInfo) {
-		log.Printf("CommendSvrInfo %+v\n", info)
-		go func() {
-			firstOnline := info.SvrList[0]
-			gameConn, err = loginOnline(conn.UserID, conn.SessionID, firstOnline)
-			if err != nil {
-				panic(err)
-			}
-		}()
-		conn.Close()
-	})
+	loginConn.SetSession(userID, session)
+	v, err := loginConn.ListOnlineServers().Get()
 	if err != nil {
 		panic(err)
 	}
-}
-
-func loginOnline(userID uint32, sessionID [16]byte, server connection.OnlineServerInfo) (conn *connection.Connection, err error) {
-	addrStr := server.IP + ":" + strconv.Itoa(int(server.Port))
-	fmt.Println("Login into Online", addrStr)
-	addr, err := net.ResolveTCPAddr("tcp", addrStr)
-	if err != nil {
-		return
-	}
-	conn, err = connection.Connect(addr)
-	if err != nil {
-		return
-	}
-	conn.SetSession(userID, sessionID)
-	err = conn.LoginOnline(func(info connection.UserInfo) {
-		fmt.Printf("UserInfo For Login %+v \n", info)
-	})
-	return
-}
-
-func parseSID(sid string) (userID uint32, session [16]byte, err error) {
-	if len(sid) != 40 {
-		err = errors.New("illegal parameter")
-		return
-	}
-	userIDtmp, err := strconv.ParseUint(sid[:8], 16, 32)
-	userID = uint32(userIDtmp)
-
-	sessiontmp, err := hex.DecodeString(sid[8:40])
-	if err != nil {
-		return
-	}
-	copy(session[:], sessiontmp[:32])
-	return
+	info := v.(connection.CommendSvrInfo)
+	firstOnline := info.SvrList[0]
+	return loginOnline(loginConn.UserID, loginConn.SessionID, firstOnline)
 }
