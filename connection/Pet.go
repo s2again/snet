@@ -12,57 +12,15 @@ import (
 type PetInfoNature uint32
 
 func (n PetInfoNature) String() string {
-	switch n {
-	case 0:
-		return "孤独"
-	case 1:
-		return "固执"
-	case 2:
-		return "调皮"
-	case 3:
-		return "勇敢"
-	case 4:
-		return "大胆"
-	case 5:
-		return "顽皮"
-	case 6:
-		return "无虑"
-	case 7:
-		return "悠闲"
-	case 8:
-		return "保守"
-	case 9:
-		return "稳重"
-	case 10:
-		return "马虎"
-	case 11:
-		return "冷静"
-	case 12:
-		return "沉着"
-	case 13:
-		return "温顺"
-	case 14:
-		return "慎重"
-	case 15:
-		return "狂妄"
-	case 16:
-		return "胆小"
-	case 17:
-		return "急躁"
-	case 18:
-		return "开朗"
-	case 19:
-		return "天真"
-	case 20:
-		return "害羞"
-	case 21:
-		return "实干"
-	case 22:
-		return "坦率"
-	case 23:
-		return "浮躁"
-	case 24:
-		return "认真"
+	if n < 25 {
+		return []string{"孤独", "固执", "调皮", "勇敢",
+			"大胆", "顽皮", "无虑", "悠闲",
+			"保守", "稳重", "马虎", "冷静",
+			"沉着", "温顺", "慎重", "狂妄",
+			"胆小", "急躁", "开朗", "天真",
+			"害羞", "实干", "坦率", "浮躁",
+			"认真",
+		}[n]
 	}
 	return "性格" + strconv.FormatUint(uint64(n), 10)
 }
