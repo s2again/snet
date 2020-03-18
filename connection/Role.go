@@ -6,7 +6,8 @@ import (
 
 type RoleColor = uint32
 
-var (
+//noinspection GoUnusedConst
+const (
 	RoleYellow RoleColor = 0xFFFF00
 	RoleGreen  RoleColor = 0x00FF00
 	RoleRed    RoleColor = 0xFD3E3E

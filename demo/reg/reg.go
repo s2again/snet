@@ -65,7 +65,6 @@ func main() {
 				}
 			})
 	}
-	select {}
 }
 
 func createNewAccount(sid string) (task *promise.Promise) {
@@ -90,6 +89,7 @@ func createNewAccount(sid string) (task *promise.Promise) {
 	return task
 }
 
+// noinspection GoUnusedFunction
 func loginhelper(sid string) (prom *promise.Promise) {
 	prom = promise.NewPromise()
 	defer func() {
@@ -142,6 +142,7 @@ func loginhelper(sid string) (prom *promise.Promise) {
 	return prom
 }
 
+// noinspection GoUnusedFunction
 func loginhelper2(sid string) *promise.Promise {
 	prom := promise.NewPromise()
 	uid, sessionID, err := core.ParseSIDString(sid)
@@ -161,6 +162,7 @@ func loginhelper2(sid string) *promise.Promise {
 	return prom
 }
 
+// noinspection GoUnusedFunction
 func createrolehelper(sid string) *promise.Promise {
 	prom := promise.NewPromise()
 	uid, sessionID, err := core.ParseSIDString(sid)

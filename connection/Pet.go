@@ -89,10 +89,10 @@ func (c *Connection) GetPetList() (p *promise.Promise) {
 				}
 			}()
 			buffer := v.(core.PacketBody)
-			var len uint32
-			core.MustBinaryRead(buffer, &len)
-			petList := make([]PetListInfo, len)
-			for i := uint32(0); i < len; i++ {
+			var size uint32
+			core.MustBinaryRead(buffer, &size)
+			petList := make([]PetListInfo, size)
+			for i := uint32(0); i < size; i++ {
 				var err error
 				petList[i], err = parsePetListInfo(buffer)
 				if err != nil {

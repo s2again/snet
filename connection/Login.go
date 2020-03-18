@@ -18,12 +18,12 @@ func (c *Connection) LoginByEmail(email string, password string) (prom *promise.
 	var pwd [32]byte
 	copy(pwd[:], []byte(t)[:32])
 	log.Println(t)
-	var embyte [64]byte
-	copy(embyte[:], []byte(email)[:64])
+	var emailBytes [64]byte
+	copy(emailBytes[:], []byte(email)[:64])
 
 	prom = promise.NewPromise()
 	c.SetSession(0, [16]byte{})
-	c.SendInPromise(Command_MAIN_LOGIN_IN, embyte, pwd, channel, gameType, uint32(0)).
+	c.SendInPromise(Command_MAIN_LOGIN_IN, emailBytes, pwd, channel, gameType, uint32(0)).
 		OnSuccess(func(v interface{}) {
 			fmt.Printf("LoginResponse %X\n", v.(core.PacketBody).Bytes())
 			prom.Resolve(v)

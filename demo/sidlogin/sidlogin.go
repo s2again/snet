@@ -51,6 +51,9 @@ func main() {
 		panic(err)
 	}
 	conn, err := login(loginConn, sid)
+	if err != nil {
+		panic(err)
+	}
 	loginConn.Close()
 	fmt.Printf("userID: %v sessionID: %v\n", loginConn.UserID, loginConn.SessionID)
 
