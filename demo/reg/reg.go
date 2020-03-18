@@ -3,16 +3,41 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
+	"os"
 	"strconv"
 
 	"github.com/fanliao/go-promise"
 
+	"main/config"
 	"main/connection"
 	"main/connection/core"
+	"main/demo/utils"
 )
 
-func main_reghelper() {
+var (
+	configFile *config.ServerConfig
+	loginAddr  *net.TCPAddr
+)
+
+func init() {
+	var err error
+	f, err := os.OpenFile("seer.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
+	log.SetOutput(f)
+	configFile, err = config.GetServerConfig()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(configFile)
+	loginAddr, err = config.GetLoginServer(configFile.IpConfig.HTTP.URL)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(loginAddr)
+}
+
+func main() {
 	for {
 		var sid string
 		fmt.Print("输入SID:")
@@ -27,7 +52,9 @@ func main_reghelper() {
 		}
 		createNewAccount(sid).
 			OnSuccess(func(v interface{}) {
-				fmt.Printf("个体： %d\n", v)
+				petinfo := v.(connection.PetInfo)
+				fmt.Printf("精灵信息：\n%+v\n", petinfo)
+				fmt.Printf("个体： %d 性格：%v\n", petinfo.Dv, petinfo.Nature)
 			}).
 			OnFailure(func(v interface{}) {
 				switch v.(type) {
@@ -160,7 +187,7 @@ func createrolehelper(sid string) *promise.Promise {
 	return prom
 }
 
-func afterlogin(conn *connection.Connection, info connection.ResponseForLogin) uint32 {
+func afterlogin(conn *connection.Connection, info connection.ResponseForLogin) connection.PetInfo {
 	fmt.Printf("%+v\n", info)
 	fmt.Println("登录成功")
 	fmt.Printf("userID: %v sessionID: %X\n", conn.UserID, conn.SessionID)
@@ -168,18 +195,16 @@ func afterlogin(conn *connection.Connection, info connection.ResponseForLogin) u
 	// Command_SYSTEM_TIME
 	// Command_MAIL_GET_UNREAD
 	// Command_NONO_INFO
-
-	acceptAndCompleteTask(conn, 0x55, 1)               // freshman suit
-	task1stPet := acceptAndCompleteTask(conn, 0x56, 2) // freshman pet
+	utils.AcceptAndCompleteTask(conn, 0x55, 1)               // freshman suit
+	task1stPet := utils.AcceptAndCompleteTask(conn, 0x56, 2) // freshman pet
 	petTm := task1stPet.CaptureTm
-	acceptAndCompleteTask(conn, 0x57, 1) // freshman pet ball
-	acceptAndCompleteTask(conn, 0x58, 1) // freshman money
-	mustResolvePromise(conn.ReleasePet(petTm, 1))
-	mustResolvePromise(conn.LeaveMap())
-	mustResolvePromise(conn.EnterMap(0, 8, 0x1c8, 0x8f))
-	mustResolvePromise(conn.ListMapPlayer())
+	utils.AcceptAndCompleteTask(conn, 0x57, 1) // freshman pet ball
+	utils.AcceptAndCompleteTask(conn, 0x58, 1) // freshman money
+	utils.MustResolvePromise(conn.ReleasePet(petTm, 1))
+	utils.MustResolvePromise(conn.LeaveMap())
+	utils.MustResolvePromise(conn.EnterMap(0, 8, 0x1c8, 0x8f))
+	utils.MustResolvePromise(conn.ListMapPlayer())
 
-	petinfo := mustResolvePromise(conn.GetPetInfo(petTm))
-	return petinfo.(connection.PetInfo).Dv
-
+	petinfo := utils.MustResolvePromise(conn.GetPetInfo(petTm))
+	return petinfo.(connection.PetInfo)
 }

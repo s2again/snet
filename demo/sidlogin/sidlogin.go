@@ -10,6 +10,7 @@ import (
 
 	"main/config"
 	"main/connection"
+	"main/demo/utils"
 )
 
 var (
@@ -53,20 +54,20 @@ func main() {
 	loginConn.Close()
 	fmt.Printf("userID: %v sessionID: %v\n", loginConn.UserID, loginConn.SessionID)
 
-	petlist := mustResolvePromise(conn.GetPetList())
+	petlist := utils.MustResolvePromise(conn.GetPetList())
 	fmt.Printf("精灵列表： \n")
 	for _, pet := range petlist.([]connection.PetListInfo) {
 		fmt.Printf("%+v\n", pet)
 	}
 	for _, pet := range petlist.([]connection.PetListInfo) {
-		petinfo := mustResolvePromise(conn.GetPetInfo(pet.CatchTime))
+		petinfo := utils.MustResolvePromise(conn.GetPetInfo(pet.CatchTime))
 		fmt.Printf("%+v\n", petinfo)
 	}
 	select {}
 }
 
 func login(loginConn *connection.Connection, sid string) (conn *connection.Connection, err error) {
-	userID, session, err := parseSID(sid)
+	userID, session, err := utils.ParseSID(sid)
 	if err != nil {
 		panic(err)
 	}
@@ -77,5 +78,5 @@ func login(loginConn *connection.Connection, sid string) (conn *connection.Conne
 	}
 	info := v.(connection.CommendSvrInfo)
 	firstOnline := info.SvrList[0]
-	return loginOnline(loginConn.UserID, loginConn.SessionID, firstOnline)
+	return utils.LoginOnline(loginConn.UserID, loginConn.SessionID, firstOnline)
 }

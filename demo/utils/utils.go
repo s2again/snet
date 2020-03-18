@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"encoding/hex"
@@ -12,7 +12,7 @@ import (
 	"main/connection"
 )
 
-func loginOnline(userID uint32, sessionID [16]byte, server connection.OnlineServerInfo) (conn *connection.Connection, err error) {
+func LoginOnline(userID uint32, sessionID [16]byte, server connection.OnlineServerInfo) (conn *connection.Connection, err error) {
 	addrStr := server.IP + ":" + strconv.Itoa(int(server.Port))
 	fmt.Println("Login into Online", addrStr)
 	addr, err := net.ResolveTCPAddr("tcp", addrStr)
@@ -30,7 +30,7 @@ func loginOnline(userID uint32, sessionID [16]byte, server connection.OnlineServ
 	return
 }
 
-func parseSID(sid string) (userID uint32, session [16]byte, err error) {
+func ParseSID(sid string) (userID uint32, session [16]byte, err error) {
 	if len(sid) != 40 {
 		err = errors.New("illegal parameter")
 		return
@@ -46,7 +46,7 @@ func parseSID(sid string) (userID uint32, session [16]byte, err error) {
 	return
 }
 
-func mustResolvePromise(p *promise.Promise) interface{} {
+func MustResolvePromise(p *promise.Promise) interface{} {
 	v, err := p.Get()
 	if err != nil {
 		panic(err)
@@ -54,12 +54,12 @@ func mustResolvePromise(p *promise.Promise) interface{} {
 	return v
 }
 
-func acceptAndCompleteTask(conn *connection.Connection, taskID uint32, param uint32) connection.NoviceFinishInfo {
+func AcceptAndCompleteTask(conn *connection.Connection, taskID uint32, param uint32) connection.NoviceFinishInfo {
 	_, err := conn.AcceptTask(taskID).Get()
 	if err != nil {
 		panic(err)
 	}
-	result := mustResolvePromise(conn.CompleteTask(taskID, param))
+	result := MustResolvePromise(conn.CompleteTask(taskID, param))
 	fmt.Println("finish novice", result)
 	return result.(connection.NoviceFinishInfo)
 }
