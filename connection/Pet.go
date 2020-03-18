@@ -121,7 +121,7 @@ func parsePetInfo(buffer core.PacketBody) (info PetInfo, err error) {
 	{
 		var name [16]byte
 		core.MustBinaryRead(buffer, &name)
-		info.Name = string(name[:16])
+		info.Name = "" // 暂时无法解析数据。（怀疑响应的name是乱码数据）
 	}
 	core.MustBinaryRead(buffer, &info.Dv)
 	core.MustBinaryRead(buffer, &info.Nature)
