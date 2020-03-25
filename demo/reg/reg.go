@@ -11,9 +11,9 @@ import (
 	"github.com/fanliao/go-promise"
 
 	"main/config"
-	"main/connection"
-	"main/connection/core"
 	"main/demo/utils"
+	"main/snet"
+	"main/snet/core"
 )
 
 var (
@@ -52,7 +52,7 @@ func main() {
 		}
 		createNewAccount(sid).
 			OnSuccess(func(v interface{}) {
-				petinfo := v.(connection.PetInfo)
+				petinfo := v.(snet.PetInfo)
 				fmt.Printf("精灵信息：\n%+v\n", petinfo)
 				fmt.Printf("个体： %d 性格：%v\n", petinfo.Dv, petinfo.Nature)
 			}).
@@ -76,12 +76,12 @@ func createNewAccount(sid string) (task *promise.Promise) {
 		return
 	}
 	loginhelper2(sid).OnSuccess(func(v interface{}) {
-		onlineConn := v.(*connection.Connection)
+		onlineConn := v.(*snet.Connection)
 		resp, err := onlineConn.LoginOnline().Get()
 		if err != nil {
 			task.Reject(err)
 		} else {
-			task.Resolve(afterlogin(onlineConn, resp.(connection.ResponseForLogin)))
+			task.Resolve(afterlogin(onlineConn, resp.(snet.ResponseForLogin)))
 		}
 	}).OnFailure(func(v interface{}) {
 		task.Reject(v.(error))
@@ -107,7 +107,7 @@ func loginhelper(sid string) (prom *promise.Promise) {
 		panic(err)
 	}
 
-	conn, err := connection.Connect(loginAddr)
+	conn, err := snet.Connect(loginAddr)
 	if err != nil {
 		panic(err)
 	}
@@ -116,7 +116,7 @@ func loginhelper(sid string) (prom *promise.Promise) {
 
 	conn.ListOnlineServers().OnSuccess(func(v interface{}) {
 		// get first online server
-		info := v.(connection.CommendSvrInfo)
+		info := v.(snet.CommendSvrInfo)
 		fmt.Printf("CommendSvrInfo %+v\n", info)
 		server := info.SvrList[0]
 		// login online
@@ -127,7 +127,7 @@ func loginhelper(sid string) (prom *promise.Promise) {
 			panic(err)
 		}
 
-		onlineConn, err := connection.Connect(addr)
+		onlineConn, err := snet.Connect(addr)
 		if err != nil {
 			panic(err)
 		}
@@ -152,7 +152,7 @@ func loginhelper2(sid string) *promise.Promise {
 	}
 
 	addr, _ := net.ResolveTCPAddr("tcp4", "182.254.130.223:1222")
-	onlineConn, err := connection.Connect(addr)
+	onlineConn, err := snet.Connect(addr)
 	if err != nil {
 		prom.Reject(err)
 		return prom
@@ -171,7 +171,7 @@ func createrolehelper(sid string) *promise.Promise {
 		return prom
 	}
 
-	conn, err := connection.Connect(loginAddr)
+	conn, err := snet.Connect(loginAddr)
 	if err != nil {
 		prom.Reject(err)
 		return prom
@@ -180,7 +180,7 @@ func createrolehelper(sid string) *promise.Promise {
 
 	var nickname [16]byte
 	copy(nickname[:], "小沙雕")
-	_, err = conn.CreateRole(nickname, connection.RoleGreen).Get()
+	_, err = conn.CreateRole(nickname, snet.RoleGreen).Get()
 	if err != nil {
 		prom.Reject(err)
 		return prom
@@ -189,7 +189,7 @@ func createrolehelper(sid string) *promise.Promise {
 	return prom
 }
 
-func afterlogin(conn *connection.Connection, info connection.ResponseForLogin) connection.PetInfo {
+func afterlogin(conn *snet.Connection, info snet.ResponseForLogin) snet.PetInfo {
 	fmt.Printf("%+v\n", info)
 	fmt.Println("登录成功")
 	fmt.Printf("userID: %v sessionID: %X\n", conn.UserID, conn.SessionID)
@@ -208,5 +208,5 @@ func afterlogin(conn *connection.Connection, info connection.ResponseForLogin) c
 	utils.MustResolvePromise(conn.ListMapPlayer())
 
 	petinfo := utils.MustResolvePromise(conn.GetPetInfo(petTm))
-	return petinfo.(connection.PetInfo)
+	return petinfo.(snet.PetInfo)
 }

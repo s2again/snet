@@ -1,9 +1,9 @@
-package connection
+package snet
 
 import (
 	"log"
 
-	"main/connection/core"
+	"main/snet/core"
 )
 
 // echo测试。服务器原样回复客户端的body

@@ -1,4 +1,4 @@
-package connection
+package snet
 
 import (
 	"log"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/fanliao/go-promise"
 
-	"main/connection/core"
+	"main/snet/core"
 )
 
 type PetInfoNature uint32

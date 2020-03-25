@@ -1,9 +1,9 @@
-package connection
+package snet
 
 import (
 	"github.com/fanliao/go-promise"
 
-	"main/connection/core"
+	"main/snet/core"
 )
 
 type NoviceFinishItem struct {

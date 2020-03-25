@@ -1,4 +1,4 @@
-// Implements Taomee Network Protocol
+// implements taomee core network protocol
 package core
 
 import (

@@ -9,22 +9,22 @@ import (
 
 	"github.com/fanliao/go-promise"
 
-	"main/connection"
+	"main/snet"
 )
 
-func LoginOnline(userID uint32, sessionID [16]byte, server connection.OnlineServerInfo) (conn *connection.Connection, err error) {
+func LoginOnline(userID uint32, sessionID [16]byte, server snet.OnlineServerInfo) (conn *snet.Connection, err error) {
 	addrStr := server.IP + ":" + strconv.Itoa(int(server.Port))
 	fmt.Println("Login into Online", addrStr)
 	addr, err := net.ResolveTCPAddr("tcp", addrStr)
 	if err != nil {
 		return
 	}
-	conn, err = connection.Connect(addr)
+	conn, err = snet.Connect(addr)
 	if err != nil {
 		return
 	}
 	conn.SetSession(userID, sessionID)
-	err = conn.LoginOnlineAndCallback(func(info connection.ResponseForLogin) {
+	err = conn.LoginOnlineAndCallback(func(info snet.ResponseForLogin) {
 		fmt.Printf("ResponseForLogin For Login %+v \n", info)
 	})
 	return
@@ -54,12 +54,12 @@ func MustResolvePromise(p *promise.Promise) interface{} {
 	return v
 }
 
-func AcceptAndCompleteTask(conn *connection.Connection, taskID uint32, param uint32) connection.NoviceFinishInfo {
+func AcceptAndCompleteTask(conn *snet.Connection, taskID uint32, param uint32) snet.NoviceFinishInfo {
 	_, err := conn.AcceptTask(taskID).Get()
 	if err != nil {
 		panic(err)
 	}
 	result := MustResolvePromise(conn.CompleteTask(taskID, param))
 	fmt.Println("finish novice", result)
-	return result.(connection.NoviceFinishInfo)
+	return result.(snet.NoviceFinishInfo)
 }

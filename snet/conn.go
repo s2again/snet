@@ -1,10 +1,10 @@
-// Implements classicalSeer
-package connection
+// implements classical seer network protocol
+package snet
 
 import (
 	"net"
 
-	"main/connection/core"
+	"main/snet/core"
 )
 
 const gameChannel uint32 = 0

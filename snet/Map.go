@@ -1,4 +1,4 @@
-package connection
+package snet
 
 import "github.com/fanliao/go-promise"
 

@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"main/config"
-	"main/connection"
+	"main/snet"
 )
 
 var (
@@ -32,7 +32,7 @@ func init() {
 }
 
 func main() {
-	loginConn, err := connection.Connect(loginAddr)
+	loginConn, err := snet.Connect(loginAddr)
 	if err != nil {
 		panic(err)
 	}

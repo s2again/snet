@@ -9,8 +9,8 @@ import (
 	"os"
 
 	"main/config"
-	"main/connection"
 	"main/demo/utils"
+	"main/snet"
 )
 
 var (
@@ -46,7 +46,7 @@ func main() {
 		panic(err)
 	}
 
-	loginConn, err := connection.Connect(loginAddr)
+	loginConn, err := snet.Connect(loginAddr)
 	if err != nil {
 		panic(err)
 	}
@@ -59,17 +59,17 @@ func main() {
 
 	petlist := utils.MustResolvePromise(conn.GetPetList())
 	fmt.Printf("精灵列表： \n")
-	for _, pet := range petlist.([]connection.PetListInfo) {
+	for _, pet := range petlist.([]snet.PetListInfo) {
 		fmt.Printf("%+v\n", pet)
 	}
-	for _, pet := range petlist.([]connection.PetListInfo) {
+	for _, pet := range petlist.([]snet.PetListInfo) {
 		petinfo := utils.MustResolvePromise(conn.GetPetInfo(pet.CatchTime))
 		fmt.Printf("%+v\n", petinfo)
 	}
 	select {}
 }
 
-func login(loginConn *connection.Connection, sid string) (conn *connection.Connection, err error) {
+func login(loginConn *snet.Connection, sid string) (conn *snet.Connection, err error) {
 	userID, session, err := utils.ParseSID(sid)
 	if err != nil {
 		panic(err)
@@ -79,7 +79,7 @@ func login(loginConn *connection.Connection, sid string) (conn *connection.Conne
 	if err != nil {
 		panic(err)
 	}
-	info := v.(connection.CommendSvrInfo)
+	info := v.(snet.CommendSvrInfo)
 	firstOnline := info.SvrList[0]
 	return utils.LoginOnline(loginConn.UserID, loginConn.SessionID, firstOnline)
 }

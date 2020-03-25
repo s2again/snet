@@ -1,4 +1,4 @@
-package connection
+package snet
 
 import (
 	"crypto/md5"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/fanliao/go-promise"
 
-	"main/connection/core"
+	"main/snet/core"
 )
 
 func (c *Connection) LoginByEmail(email string, password string) (prom *promise.Promise) {
