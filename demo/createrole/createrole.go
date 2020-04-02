@@ -6,14 +6,12 @@ import (
 	"log"
 	"net"
 	"os"
-	"strconv"
 
 	"github.com/fanliao/go-promise"
 
 	"main/config"
 	"main/demo/utils"
 	"main/snet"
-	"main/snet/core"
 )
 
 var (
@@ -38,6 +36,18 @@ func init() {
 }
 
 func main() {
+	fmt.Print("输入新手宠物任务参数:")
+	var noviceParam1 uint32
+	n, err := fmt.Scanf("%u\n", &noviceParam1)
+	if n < 1 {
+		fmt.Println("too few input")
+		os.Exit(-1)
+	}
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(-1)
+	}
+
 	for {
 		var sid string
 		fmt.Print("输入SID:")
@@ -50,7 +60,8 @@ func main() {
 			fmt.Println(err.Error())
 			continue
 		}
-		createNewAccount(sid).
+
+		_, _ = createFreshmenRole(sid, noviceParam1).
 			OnSuccess(func(v interface{}) {
 				petinfo := v.(snet.PetInfo)
 				fmt.Printf("精灵信息：\n%+v\n", petinfo)
@@ -63,133 +74,48 @@ func main() {
 				default:
 					fmt.Println("Error: ", v)
 				}
-			})
+			}).Get()
 	}
 }
 
-func createNewAccount(sid string) (task *promise.Promise) {
+func createFreshmenRole(sid string, noviceParam1 uint32) (task *promise.Promise) {
 	task = promise.NewPromise()
-	// Login
-	_, err := createrolehelper(sid).Get()
-	if err != nil {
-		task.Reject(errors.New("createrolehelper promise rejected: " + err.Error()))
-		return
-	}
-	loginhelper2(sid).OnSuccess(func(v interface{}) {
-		onlineConn := v.(*snet.Connection)
-		resp, err := onlineConn.LoginOnline().Get()
+	go func() {
+		// connect sub server
+		v, err := utils.ConnectSub(loginAddr, sid).Get()
 		if err != nil {
-			task.Reject(err)
-		} else {
-			task.Resolve(afterlogin(onlineConn, resp.(snet.ResponseForLogin)))
+			task.Reject(errors.New("connectSub promise rejected: " + err.Error()))
+			return
 		}
-	}).OnFailure(func(v interface{}) {
-		task.Reject(v.(error))
-	})
+		// create
+		conn := v.(*snet.Connection)
+		v, err = createRole(conn).Get()
+		if err != nil {
+			task.Reject(errors.New("createRole promise rejected: " + err.Error()))
+			return
+		}
+		// get online server list
+		list, err := utils.GetServerList(conn)
+		if err != nil || len(list) < 1 {
+			task.Reject(errors.New("getServerList failed: " + err.Error()))
+			return
+		}
+		// connect first online server, and close connection to sub server
+		v, err = utils.Sub2Online(conn, list[0]).Get()
+		if err != nil {
+			task.Reject(errors.New("connectOnline promise rejected: " + err.Error()))
+			return
+		}
+		onlineConn := v.(*snet.Connection)
+		// login online server
+		resp, err := onlineConn.LoginOnline().Get()
+		task.Resolve(finishNoviceAfterLogin(onlineConn, resp.(snet.ResponseForLogin), noviceParam1))
+		onlineConn.Close()
+	}()
 	return task
 }
 
-// noinspection GoUnusedFunction
-func loginhelper(sid string) (prom *promise.Promise) {
-	prom = promise.NewPromise()
-	defer func() {
-		x := recover()
-		if x != nil {
-			err, ok := x.(error)
-			if !ok {
-				err = errors.New("promise rejected: " + fmt.Sprint(x))
-			}
-			prom.Reject(err)
-		}
-	}()
-	uid, sessionID, err := core.ParseSIDString(sid)
-	if err != nil {
-		panic(err)
-	}
-
-	conn, err := snet.Connect(loginAddr)
-	if err != nil {
-		panic(err)
-	}
-
-	conn.SetSession(uid, sessionID)
-
-	conn.ListOnlineServers().OnSuccess(func(v interface{}) {
-		// get first online server
-		info := v.(snet.CommendSvrInfo)
-		fmt.Printf("CommendSvrInfo %+v\n", info)
-		server := info.SvrList[0]
-		// login online
-		addrStr := server.IP + ":" + strconv.Itoa(int(server.Port))
-		fmt.Println("Login into Online", addrStr)
-		addr, err := net.ResolveTCPAddr("tcp", addrStr)
-		if err != nil {
-			panic(err)
-		}
-
-		onlineConn, err := snet.Connect(addr)
-		if err != nil {
-			panic(err)
-		}
-
-		conn.SetSession(uid, sessionID)
-		prom.Resolve(onlineConn)
-		conn.Close()
-	}).OnFailure(func(v interface{}) {
-		conn.Close()
-		prom.Reject(v.(error))
-	})
-	return prom
-}
-
-// noinspection GoUnusedFunction
-func loginhelper2(sid string) *promise.Promise {
-	prom := promise.NewPromise()
-	uid, sessionID, err := core.ParseSIDString(sid)
-	if err != nil {
-		prom.Reject(err)
-		return prom
-	}
-
-	addr, _ := net.ResolveTCPAddr("tcp4", "182.254.130.223:1222")
-	onlineConn, err := snet.Connect(addr)
-	if err != nil {
-		prom.Reject(err)
-		return prom
-	}
-	onlineConn.SetSession(uid, sessionID)
-	prom.Resolve(onlineConn)
-	return prom
-}
-
-// noinspection GoUnusedFunction
-func createrolehelper(sid string) *promise.Promise {
-	prom := promise.NewPromise()
-	uid, sessionID, err := core.ParseSIDString(sid)
-	if err != nil {
-		prom.Reject(errors.New("ParseSIDString failed:" + err.Error()))
-		return prom
-	}
-
-	conn, err := snet.Connect(loginAddr)
-	if err != nil {
-		prom.Reject(err)
-		return prom
-	}
-	conn.SetSession(uid, sessionID)
-
-	var nickname [16]byte
-	copy(nickname[:], "小沙雕")
-	_, err = conn.CreateRole(nickname, snet.RoleGreen).Get()
-	if err != nil {
-		prom.Reject(err)
-		return prom
-	}
-	prom.Resolve(nil)
-	return prom
-}
-
-func afterlogin(conn *snet.Connection, info snet.ResponseForLogin) snet.PetInfo {
+func finishNoviceAfterLogin(conn *snet.Connection, info snet.ResponseForLogin, noviceParam1 uint32) snet.PetInfo {
 	fmt.Printf("%+v\n", info)
 	fmt.Println("登录成功")
 	fmt.Printf("userID: %v sessionID: %X\n", conn.UserID, conn.SessionID)
@@ -197,8 +123,8 @@ func afterlogin(conn *snet.Connection, info snet.ResponseForLogin) snet.PetInfo 
 	// Command_SYSTEM_TIME
 	// Command_MAIL_GET_UNREAD
 	// Command_NONO_INFO
-	utils.AcceptAndCompleteTask(conn, 0x55, 1)               // freshman suit
-	task1stPet := utils.AcceptAndCompleteTask(conn, 0x56, 2) // freshman pet
+	utils.AcceptAndCompleteTask(conn, 0x55, 1)                          // freshman suit
+	task1stPet := utils.AcceptAndCompleteTask(conn, 0x56, noviceParam1) // freshman pet
 	petTm := task1stPet.CaptureTm
 	utils.AcceptAndCompleteTask(conn, 0x57, 1) // freshman pet ball
 	utils.AcceptAndCompleteTask(conn, 0x58, 1) // freshman money
@@ -209,4 +135,20 @@ func afterlogin(conn *snet.Connection, info snet.ResponseForLogin) snet.PetInfo 
 
 	petinfo := utils.MustResolvePromise(conn.GetPetInfo(petTm))
 	return petinfo.(snet.PetInfo)
+}
+
+// noinspection GoUnusedFunction
+func createRole(conn *snet.Connection) *promise.Promise {
+	prom := promise.NewPromise()
+	go func() {
+		var nickname [16]byte
+		copy(nickname[:], "小沙雕")
+		_, err := conn.CreateRole(nickname, snet.RoleGreen).Get()
+		if err != nil {
+			prom.Reject(err)
+			return
+		}
+		prom.Resolve(nil)
+	}()
+	return prom
 }

@@ -10,7 +10,71 @@ import (
 	"github.com/fanliao/go-promise"
 
 	"main/snet"
+	"main/snet/core"
 )
+
+// noinspection GoUnusedFunction
+func ConnectSub(loginAddr *net.TCPAddr, sid string) (prom *promise.Promise) {
+	prom = promise.NewPromise()
+	go func() {
+		defer func() {
+			x := recover()
+			if x != nil {
+				err, ok := x.(error)
+				if !ok {
+					err = errors.New("promise rejected: " + fmt.Sprint(x))
+				}
+				prom.Reject(err)
+			}
+		}()
+		uid, sessionID, err := core.ParseSIDString(sid)
+		if err != nil {
+			panic(err)
+		}
+
+		conn, err := snet.Connect(loginAddr)
+		if err != nil {
+			panic(err)
+		}
+
+		conn.SetSession(uid, sessionID)
+		prom.Resolve(conn)
+	}()
+	return prom
+}
+
+// noinspection GoUnusedFunction
+func Sub2Online(conn *snet.Connection, server snet.OnlineServerInfo) *promise.Promise {
+	prom := promise.NewPromise()
+	go func() {
+		// login online
+		addrStr := server.IP + ":" + strconv.Itoa(int(server.Port))
+		fmt.Println("Login into Online", addrStr)
+		addr, err := net.ResolveTCPAddr("tcp", addrStr)
+		if err != nil {
+			panic(err)
+		}
+
+		onlineConn, err := snet.Connect(addr)
+		if err != nil {
+			panic(err)
+		}
+		onlineConn.SetSession(conn.UserID, conn.SessionID)
+		conn.Close()
+		prom.Resolve(onlineConn)
+	}()
+	return prom
+}
+
+func GetServerList(subConn *snet.Connection) ([]snet.OnlineServerInfo, error) {
+	v, err := subConn.ListOnlineServers().Get()
+	if err != nil {
+		return nil, err
+	}
+	info := v.(snet.CommendSvrInfo)
+	fmt.Printf("CommendSvrInfo %+v\n", info)
+	return info.SvrList, nil
+}
 
 func LoginOnline(userID uint32, sessionID [16]byte, server snet.OnlineServerInfo) (conn *snet.Connection, err error) {
 	addrStr := server.IP + ":" + strconv.Itoa(int(server.Port))
