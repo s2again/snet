@@ -38,7 +38,7 @@ func init() {
 func main() {
 	fmt.Print("输入新手宠物任务参数:")
 	var noviceParam1 uint32
-	n, err := fmt.Scanf("%u\n", &noviceParam1)
+	n, err := fmt.Scanf("%d\n", &noviceParam1)
 	if n < 1 {
 		fmt.Println("too few input")
 		os.Exit(-1)
