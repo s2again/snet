@@ -81,5 +81,6 @@ func login(loginConn *snet.GuideServerConnection, sid string) (conn *snet.Online
 	}
 	info := v.(snet.CommendSvrInfo)
 	firstOnline := info.SvrList[0]
-	return utils.LoginOnlineServer(loginConn.UserID, loginConn.SessionID, firstOnline)
+	fmt.Println("Login into Online", firstOnline.OnlineID, firstOnline.IP, firstOnline.Port)
+	return snet.ConnectOnlineServer(firstOnline, userID, session)
 }

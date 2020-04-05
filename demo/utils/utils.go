@@ -14,51 +14,35 @@ import (
 )
 
 // noinspection GoUnusedFunction
-func ConnectGuideServer(loginAddr *net.TCPAddr, sid string) (prom *promise.Promise) {
-	prom = promise.NewPromise()
-	go func() {
-		defer func() {
-			x := recover()
-			if x != nil {
-				err, ok := x.(error)
-				if !ok {
-					err = errors.New("promise rejected: " + fmt.Sprint(x))
-				}
-				prom.Reject(err)
-			}
-		}()
-		uid, sessionID, err := core.ParseSIDString(sid)
-		if err != nil {
-			prom.Reject(err)
-			return
+func ConnectGuideServer(loginAddr *net.TCPAddr, sid string) (conn *snet.GuideServerConnection, err error) {
+	defer func() {
+		x := recover()
+		if x != nil {
+			err = fmt.Errorf("unknown error: %v", x)
 		}
-
-		conn, err := snet.ConnectGuideServer(loginAddr)
-		if err != nil {
-			prom.Reject(err)
-			return
-		}
-
-		conn.SetSession(uid, sessionID)
-		prom.Resolve(conn)
 	}()
-	return prom
+	uid, sessionID, err := core.ParseSIDString(sid)
+	if err != nil {
+		return nil, fmt.Errorf("ParseSIDString Error: %v", err)
+	}
+
+	conn, err = snet.ConnectGuideServer(loginAddr)
+	if err != nil {
+		return nil, fmt.Errorf("ConnectGuideServer Error: %v", err)
+	}
+	conn.SetSession(uid, sessionID)
+	return
 }
 
 // noinspection GoUnusedFunction
-func Guide2Online(conn *snet.GuideServerConnection, server snet.OnlineServerInfo) *promise.Promise {
-	prom := promise.NewPromise()
-	go func() {
-		// login online
-		onlineConn, err := snet.ConnectOnlineServer(server, conn.UserID, conn.SessionID)
-		if err != nil {
-			prom.Reject(err)
-			return
-		}
-		conn.Close()
-		prom.Resolve(onlineConn)
-	}()
-	return prom
+func Guide2Online(conn *snet.GuideServerConnection, server snet.OnlineServerInfo) (onlineConn *snet.OnlineServerConnection, err error) {
+	// login online
+	onlineConn, err = snet.ConnectOnlineServer(server, conn.UserID, conn.SessionID)
+	if err != nil {
+		return nil, err
+	}
+	conn.Close()
+	return
 }
 
 func GetOnlineServerList(conn *snet.GuideServerConnection) ([]snet.OnlineServerInfo, error) {
@@ -69,11 +53,6 @@ func GetOnlineServerList(conn *snet.GuideServerConnection) ([]snet.OnlineServerI
 	info := v.(snet.CommendSvrInfo)
 	fmt.Printf("CommendSvrInfo %+v\n", info)
 	return info.SvrList, nil
-}
-
-func LoginOnlineServer(userID uint32, sessionID [16]byte, server snet.OnlineServerInfo) (conn *snet.OnlineServerConnection, err error) {
-	fmt.Println("Login into Online", server.OnlineID, server.IP, server.Port)
-	return snet.ConnectOnlineServer(server, userID, sessionID)
 }
 
 func ParseSID(sid string) (userID uint32, session [16]byte, err error) {
@@ -100,7 +79,7 @@ func MustResolvePromise(p *promise.Promise) interface{} {
 	return v
 }
 
-func AcceptAndCompleteTask(conn *snet.OnlineServerConnection, taskID uint32, param uint32) snet.NoviceFinishInfo {
+func MustAcceptAndCompleteTask(conn *snet.OnlineServerConnection, taskID uint32, param uint32) snet.NoviceFinishInfo {
 	_, err := conn.AcceptTask(taskID).Get()
 	if err != nil {
 		panic(err)
