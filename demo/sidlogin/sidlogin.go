@@ -81,5 +81,5 @@ func login(loginConn *snet.Connection, sid string) (conn *snet.Connection, err e
 	}
 	info := v.(snet.CommendSvrInfo)
 	firstOnline := info.SvrList[0]
-	return utils.LoginOnline(loginConn.UserID, loginConn.SessionID, firstOnline)
+	return utils.LoginOnlineServer(loginConn.UserID, loginConn.SessionID, firstOnline)
 }

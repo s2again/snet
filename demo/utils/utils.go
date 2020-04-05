@@ -14,7 +14,7 @@ import (
 )
 
 // noinspection GoUnusedFunction
-func ConnectSub(loginAddr *net.TCPAddr, sid string) (prom *promise.Promise) {
+func ConnectGuideServer(loginAddr *net.TCPAddr, sid string) (prom *promise.Promise) {
 	prom = promise.NewPromise()
 	go func() {
 		defer func() {
@@ -44,7 +44,7 @@ func ConnectSub(loginAddr *net.TCPAddr, sid string) (prom *promise.Promise) {
 }
 
 // noinspection GoUnusedFunction
-func Sub2Online(conn *snet.Connection, server snet.OnlineServerInfo) *promise.Promise {
+func Guide2Online(conn *snet.Connection, server snet.OnlineServerInfo) *promise.Promise {
 	prom := promise.NewPromise()
 	go func() {
 		// login online
@@ -66,7 +66,7 @@ func Sub2Online(conn *snet.Connection, server snet.OnlineServerInfo) *promise.Pr
 	return prom
 }
 
-func GetServerList(subConn *snet.Connection) ([]snet.OnlineServerInfo, error) {
+func GetOnlineServerList(subConn *snet.Connection) ([]snet.OnlineServerInfo, error) {
 	v, err := subConn.ListOnlineServers().Get()
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func GetServerList(subConn *snet.Connection) ([]snet.OnlineServerInfo, error) {
 	return info.SvrList, nil
 }
 
-func LoginOnline(userID uint32, sessionID [16]byte, server snet.OnlineServerInfo) (conn *snet.Connection, err error) {
+func LoginOnlineServer(userID uint32, sessionID [16]byte, server snet.OnlineServerInfo) (conn *snet.Connection, err error) {
 	addrStr := server.IP + ":" + strconv.Itoa(int(server.Port))
 	fmt.Println("Login into Online", addrStr)
 	addr, err := net.ResolveTCPAddr("tcp", addrStr)

@@ -82,12 +82,13 @@ func createFreshmenRole(sid string, noviceParam1 uint32) (task *promise.Promise)
 	task = promise.NewPromise()
 	go func() {
 		// connect sub server
-		v, err := utils.ConnectSub(loginAddr, sid).Get()
+		v, err := utils.ConnectGuideServer(loginAddr, sid).Get()
 		if err != nil {
-			task.Reject(errors.New("connectSub promise rejected: " + err.Error()))
+			task.Reject(errors.New("ConnectGuideServer promise rejected: " + err.Error()))
 			return
 		}
 		// create
+
 		conn := v.(*snet.Connection)
 		v, err = createRole(conn).Get()
 		if err != nil {
@@ -95,13 +96,13 @@ func createFreshmenRole(sid string, noviceParam1 uint32) (task *promise.Promise)
 			return
 		}
 		// get online server list
-		list, err := utils.GetServerList(conn)
+		list, err := utils.GetOnlineServerList(conn)
 		if err != nil || len(list) < 1 {
 			task.Reject(errors.New("getServerList failed: " + err.Error()))
 			return
 		}
 		// connect first online server, and close connection to sub server
-		v, err = utils.Sub2Online(conn, list[0]).Get()
+		v, err = utils.Guide2Online(conn, list[0]).Get()
 		if err != nil {
 			task.Reject(errors.New("connectOnline promise rejected: " + err.Error()))
 			return
