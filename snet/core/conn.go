@@ -19,14 +19,19 @@ const packetHeadLen = 17
 
 type MsgListener func(body PacketBody)
 type MsgListenerID *MsgListener
+type ErrorListener func(err error)
+type ErrorListenerID *ErrorListener
 
 type Connection struct {
 	UserID    uint32
 	SessionID [16]byte
 	sequence  int32
 
-	listeners            map[Command][]*MsgListener
-	listenersLock        sync.RWMutex
+	listeners          map[Command][]*MsgListener
+	listenersLock      sync.RWMutex
+	errorListeners     []*ErrorListener
+	errorListenersLock sync.RWMutex
+
 	responsePromises     hashmap.Map
 	responsePromisesLock sync.RWMutex
 
@@ -56,35 +61,53 @@ func (c *Connection) handlePacket() {
 	for {
 		packet, err := depackFromStream(c.tcpConn)
 		if err != nil {
+			c.cleanAllWaiters(errors.New("Packet Parse Error:" + err.Error()))
 			return
 		}
 		if packet != nil {
-			// find listeners
-			listeners := c.matchListeners(packet.head.command)
-			for _, f := range listeners {
-				(*f)(packet.body)
+			c.deliverPacket(packet)
+		}
+	}
+}
+
+func (c *Connection) deliverPacket(packet *RecvPacket) {
+	// find listeners
+	listeners := c.matchListeners(packet.head.command)
+	for _, f := range listeners {
+		(*f)(packet.body)
+	}
+	// find promise
+	firstPromise := c.firstPromise(packet.head.command)
+	if firstPromise != nil {
+		if packet.head.errno != 0 {
+			err := firstPromise.Reject(errors.New("Errno" + strconv.Itoa(int(packet.head.errno))))
+			if err != nil {
+				log.Println("Reject Promise Failed: ", err)
 			}
-			// find promise
-			firstPromise := c.firstPromise(packet.head.command)
-			if firstPromise != nil {
-				if packet.head.errno != 0 {
-					err := firstPromise.Reject(errors.New("Errno" + strconv.Itoa(int(packet.head.errno))))
-					if err != nil {
-						log.Println("Reject Promise Failed: ", err)
-					}
-				} else {
-					err := firstPromise.Resolve(packet.body)
-					if err != nil {
-						log.Println("Resolve Promise Failed: ", err)
-					}
-				}
-			}
-			drop := len(listeners) == 0 && firstPromise == nil
-			if drop {
-				log.Printf("Unhandled Packet %+v\n", packet)
+		} else {
+			err := firstPromise.Resolve(packet.body)
+			if err != nil {
+				log.Println("Resolve Promise Failed: ", err)
 			}
 		}
 	}
+	drop := len(listeners) == 0 && firstPromise == nil
+	if drop {
+		log.Printf("Unhandled Packet %+v\n", packet)
+	}
+}
+
+func (c *Connection) cleanAllWaiters(reason error) {
+	c.responsePromisesLock.Lock()
+	defer c.responsePromisesLock.Unlock()
+	for _, v := range c.responsePromises.Values() {
+		d := v.(*deque.Deque)
+		for d.Len() > 0 {
+			p, _ := d.PopFront()
+			p.(*promise.Promise).Reject(reason)
+		}
+	}
+	c.responsePromises.Clear()
 }
 
 // Get all the listeners that match command
@@ -144,6 +167,30 @@ func (c *Connection) RemoveListener(cmd Command, listenID MsgListenerID) {
 		if p == listenID {
 			log.Println("remove Listener", listenID)
 			c.listeners[cmd] = append(c.listeners[cmd][:i], c.listeners[cmd][i+1:]...)
+			return
+		}
+	}
+}
+
+func (c *Connection) AddErrorListener(listen ErrorListener) ErrorListenerID {
+	c.errorListenersLock.Lock()
+	defer c.errorListenersLock.Unlock()
+	c.errorListeners = append(c.errorListeners, &listen)
+	id := &listen
+	log.Println("add ErrorListener", id)
+	return id
+}
+
+func (c *Connection) RemoveErrorListener(listenID ErrorListenerID) {
+	if c.errorListeners == nil {
+		return
+	}
+	c.errorListenersLock.Lock()
+	defer c.errorListenersLock.Unlock()
+	for i, p := range c.errorListeners {
+		if p == listenID {
+			log.Println("remove Listener", listenID)
+			c.errorListeners = append(c.errorListeners[:i], c.errorListeners[i+1:]...)
 			return
 		}
 	}

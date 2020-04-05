@@ -58,7 +58,7 @@ func depackFromStream(reader io.Reader) (pack *RecvPacket, err error) {
 		n, err := reader.Read(buffer[index:packetHeadLen]) // receive head
 		if err != nil {
 			log.Println(err)
-			return nil, err
+			return nil, errors.New("Socket IO Error:" + err.Error())
 		}
 		log.Println("response bytes", buffer[:n])
 		index += n
