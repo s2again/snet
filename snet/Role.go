@@ -18,7 +18,7 @@ const (
 	RoleBlack  RoleColor = 0x000000
 )
 
-func (c *Connection) CreateRole(nickname [16]byte, color RoleColor) *promise.Promise {
+func (c *GuideServerConnection) CreateRole(nickname [16]byte, color RoleColor) *promise.Promise {
 	const verifyCode uint32 = 0 // 邀请码机制，已作废。传0即可。
 	return c.SendInPromise(Command_CREATE_ROLE, c.SessionID, nickname, color, verifyCode, CHANNEL)
 }

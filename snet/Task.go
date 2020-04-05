@@ -18,11 +18,11 @@ type NoviceFinishInfo struct {
 	ItemList     []NoviceFinishItem
 }
 
-func (c *Connection) AcceptTask(taskID uint32) *promise.Promise {
+func (c *OnlineServerConnection) AcceptTask(taskID uint32) *promise.Promise {
 	return c.SendInPromise(Command_ACCEPT_TASK, taskID)
 }
 
-func (c *Connection) CompleteTask(taskID uint32, param uint32) *promise.Promise {
+func (c *OnlineServerConnection) CompleteTask(taskID uint32, param uint32) *promise.Promise {
 	prom := promise.NewPromise()
 	c.SendInPromise(Command_COMPLETE_TASK, taskID, param).
 		OnSuccess(func(v interface{}) {

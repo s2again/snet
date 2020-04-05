@@ -39,7 +39,11 @@ type ServerConfig struct {
 }
 
 func GetServerConfig() (config *ServerConfig, err error) {
-	resp, err := http.Get(ServerConfigURL)
+	return GetServerConfigFrom(ServerConfigURL)
+}
+
+func GetServerConfigFrom(url string) (config *ServerConfig, err error) {
+	resp, err := http.Get(url)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -51,8 +55,8 @@ func GetServerConfig() (config *ServerConfig, err error) {
 	return
 }
 
-func GetLoginServer(IPServerHTTPURL string) (addr *net.TCPAddr, err error) {
-	resp, err := http.Get(IPServerHTTPURL)
+func (c *ServerConfig) GetGuideServerByHTTP() (addr *net.TCPAddr, err error) {
+	resp, err := http.Get(c.IpConfig.HTTP.URL)
 	if resp != nil {
 		defer resp.Body.Close()
 	}

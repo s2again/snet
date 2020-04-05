@@ -23,7 +23,7 @@ type ResponseForLogin struct {
 	LoginCnt                                                      uint32
 }
 
-func (c *Connection) LoginOnline() *promise.Promise {
+func (c *OnlineServerConnection) LoginOnline() *promise.Promise {
 	prom := promise.NewPromise()
 	c.SendInPromise(Command_LOGIN_IN, c.SessionID).OnSuccess(func(v interface{}) {
 		info, err := parseUserInfoForLogin(v.(core.PacketBody))
@@ -40,7 +40,7 @@ func (c *Connection) LoginOnline() *promise.Promise {
 	return prom
 }
 
-func (c *Connection) LoginOnlineAndCallback(callback func(ResponseForLogin)) error {
+func (c *OnlineServerConnection) LoginOnlineAndCallback(callback func(ResponseForLogin)) error {
 	body, err := c.SendInPromise(Command_LOGIN_IN, c.SessionID).Get()
 	if err != nil {
 		return err

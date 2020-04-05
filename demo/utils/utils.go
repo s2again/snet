@@ -29,12 +29,14 @@ func ConnectGuideServer(loginAddr *net.TCPAddr, sid string) (prom *promise.Promi
 		}()
 		uid, sessionID, err := core.ParseSIDString(sid)
 		if err != nil {
-			panic(err)
+			prom.Reject(err)
+			return
 		}
 
-		conn, err := snet.Connect(loginAddr)
+		conn, err := snet.ConnectGuideServer(loginAddr)
 		if err != nil {
-			panic(err)
+			prom.Reject(err)
+			return
 		}
 
 		conn.SetSession(uid, sessionID)
@@ -44,30 +46,23 @@ func ConnectGuideServer(loginAddr *net.TCPAddr, sid string) (prom *promise.Promi
 }
 
 // noinspection GoUnusedFunction
-func Guide2Online(conn *snet.Connection, server snet.OnlineServerInfo) *promise.Promise {
+func Guide2Online(conn *snet.GuideServerConnection, server snet.OnlineServerInfo) *promise.Promise {
 	prom := promise.NewPromise()
 	go func() {
 		// login online
-		addrStr := server.IP + ":" + strconv.Itoa(int(server.Port))
-		fmt.Println("Login into Online", addrStr)
-		addr, err := net.ResolveTCPAddr("tcp", addrStr)
+		onlineConn, err := snet.ConnectOnlineServer(server, conn.UserID, conn.SessionID)
 		if err != nil {
-			panic(err)
+			prom.Reject(err)
+			return
 		}
-
-		onlineConn, err := snet.Connect(addr)
-		if err != nil {
-			panic(err)
-		}
-		onlineConn.SetSession(conn.UserID, conn.SessionID)
 		conn.Close()
 		prom.Resolve(onlineConn)
 	}()
 	return prom
 }
 
-func GetOnlineServerList(subConn *snet.Connection) ([]snet.OnlineServerInfo, error) {
-	v, err := subConn.ListOnlineServers().Get()
+func GetOnlineServerList(conn *snet.GuideServerConnection) ([]snet.OnlineServerInfo, error) {
+	v, err := conn.ListOnlineServers().Get()
 	if err != nil {
 		return nil, err
 	}
@@ -76,22 +71,9 @@ func GetOnlineServerList(subConn *snet.Connection) ([]snet.OnlineServerInfo, err
 	return info.SvrList, nil
 }
 
-func LoginOnlineServer(userID uint32, sessionID [16]byte, server snet.OnlineServerInfo) (conn *snet.Connection, err error) {
-	addrStr := server.IP + ":" + strconv.Itoa(int(server.Port))
-	fmt.Println("Login into Online", addrStr)
-	addr, err := net.ResolveTCPAddr("tcp", addrStr)
-	if err != nil {
-		return
-	}
-	conn, err = snet.Connect(addr)
-	if err != nil {
-		return
-	}
-	conn.SetSession(userID, sessionID)
-	err = conn.LoginOnlineAndCallback(func(info snet.ResponseForLogin) {
-		fmt.Printf("ResponseForLogin For Login %+v \n", info)
-	})
-	return
+func LoginOnlineServer(userID uint32, sessionID [16]byte, server snet.OnlineServerInfo) (conn *snet.OnlineServerConnection, err error) {
+	fmt.Println("Login into Online", server.OnlineID, server.IP, server.Port)
+	return snet.ConnectOnlineServer(server, userID, sessionID)
 }
 
 func ParseSID(sid string) (userID uint32, session [16]byte, err error) {
@@ -118,7 +100,7 @@ func MustResolvePromise(p *promise.Promise) interface{} {
 	return v
 }
 
-func AcceptAndCompleteTask(conn *snet.Connection, taskID uint32, param uint32) snet.NoviceFinishInfo {
+func AcceptAndCompleteTask(conn *snet.OnlineServerConnection, taskID uint32, param uint32) snet.NoviceFinishInfo {
 	_, err := conn.AcceptTask(taskID).Get()
 	if err != nil {
 		panic(err)

@@ -15,7 +15,7 @@ import (
 
 var (
 	configFile *config.ServerConfig
-	loginAddr  *net.TCPAddr
+	guideAddr  *net.TCPAddr
 )
 
 func init() {
@@ -27,11 +27,11 @@ func init() {
 		panic(err)
 	}
 	fmt.Println(configFile)
-	loginAddr, err = config.GetLoginServer(configFile.IpConfig.HTTP.URL)
+	guideAddr, err = configFile.GetGuideServerByHTTP()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(loginAddr)
+	fmt.Println(guideAddr)
 }
 
 func main() {
@@ -46,7 +46,7 @@ func main() {
 		panic(err)
 	}
 
-	loginConn, err := snet.Connect(loginAddr)
+	loginConn, err := snet.ConnectGuideServer(guideAddr)
 	if err != nil {
 		panic(err)
 	}
@@ -69,7 +69,7 @@ func main() {
 	select {}
 }
 
-func login(loginConn *snet.Connection, sid string) (conn *snet.Connection, err error) {
+func login(loginConn *snet.GuideServerConnection, sid string) (conn *snet.OnlineServerConnection, err error) {
 	userID, session, err := utils.ParseSID(sid)
 	if err != nil {
 		panic(err)

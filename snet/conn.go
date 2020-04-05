@@ -3,6 +3,7 @@ package snet
 
 import (
 	"net"
+	"strconv"
 
 	"main/snet/core"
 )
@@ -13,6 +14,13 @@ type Connection struct {
 	*core.Connection
 }
 
+type GuideServerConnection struct {
+	Connection
+}
+type OnlineServerConnection struct {
+	Connection
+}
+
 func Connect(addr *net.TCPAddr) (conn *Connection, err error) {
 	coreConn, err := core.Connect(addr)
 	if err != nil {
@@ -21,10 +29,24 @@ func Connect(addr *net.TCPAddr) (conn *Connection, err error) {
 	return &Connection{coreConn}, nil
 }
 
-func (c *Connection) FinishTask(taskID int32) error {
-	err := c.Send(Command_COMPLETE_TASK, taskID, 1)
-	if err != nil {
-		return err
+func ConnectGuideServer(addr *net.TCPAddr) (conn *GuideServerConnection, err error) {
+	c, e := Connect(addr)
+	if e != nil {
+		return nil, e
 	}
-	return nil
+	return &GuideServerConnection{*c}, nil
+}
+
+func ConnectOnlineServer(server OnlineServerInfo, userID uint32, sessionID [16]byte) (conn *OnlineServerConnection, err error) {
+	addrStr := server.IP + ":" + strconv.Itoa(int(server.Port))
+	addr, err := net.ResolveTCPAddr("tcp", addrStr)
+	if err != nil {
+		return nil, err
+	}
+	c, err := Connect(addr)
+	if err != nil {
+		return nil, err
+	}
+	c.SetSession(userID, sessionID)
+	return &OnlineServerConnection{*c}, nil
 }

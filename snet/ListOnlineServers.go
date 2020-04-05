@@ -24,7 +24,7 @@ type CommendSvrInfo struct {
 	// friendList []byte
 }
 
-func (c *Connection) ListOnlineServers() *promise.Promise {
+func (c *GuideServerConnection) ListOnlineServers() *promise.Promise {
 	prom := promise.NewPromise()
 	c.SendInPromise(Command_COMMEND_ONLINE, c.SessionID, gameChannel).OnSuccess(func(v interface{}) {
 		list, err := parseCommendSvrInfo(v.(core.PacketBody))
@@ -41,7 +41,7 @@ func (c *Connection) ListOnlineServers() *promise.Promise {
 	return prom
 }
 
-func (c *Connection) ListOnlineServersAndCallback(callback func(CommendSvrInfo)) error {
+func (c *GuideServerConnection) ListOnlineServersAndCallback(callback func(CommendSvrInfo)) error {
 	v, err := c.SendInPromise(Command_COMMEND_ONLINE, c.SessionID, gameChannel).Get()
 	if err != nil {
 		return err

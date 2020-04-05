@@ -16,7 +16,7 @@ import (
 
 var (
 	configFile *config.ServerConfig
-	loginAddr  *net.TCPAddr
+	guideAddr  *net.TCPAddr
 )
 
 func init() {
@@ -28,11 +28,11 @@ func init() {
 		panic(err)
 	}
 	fmt.Println(configFile)
-	loginAddr, err = config.GetLoginServer(configFile.IpConfig.HTTP.URL)
+	guideAddr, err = configFile.GetGuideServerByHTTP()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(loginAddr)
+	fmt.Println(guideAddr)
 }
 
 func main() {
@@ -61,40 +61,35 @@ func main() {
 			continue
 		}
 
-		_, _ = createFreshmenRole(sid, noviceParam1).
-			OnSuccess(func(v interface{}) {
-				petinfo := v.(snet.PetInfo)
-				fmt.Printf("精灵信息：\n%+v\n", petinfo)
-				fmt.Printf("个体： %d 性格：%v\n", petinfo.Dv, petinfo.Nature)
-			}).
-			OnFailure(func(v interface{}) {
-				switch v.(type) {
-				case error:
-					fmt.Println("Error: ", v.(error).Error())
-				default:
-					fmt.Println("Error: ", v)
-				}
-			}).Get()
+		v, err := createFreshmenRole(sid, noviceParam1).Get()
+		if err != nil {
+			log.Println(err)
+			fmt.Println("Error: ", err)
+			continue
+		}
+		petinfo := v.(snet.PetInfo)
+		fmt.Printf("精灵信息：\n%+v\n", petinfo)
+		fmt.Printf("个体： %d 性格：%v\n", petinfo.Dv, petinfo.Nature)
 	}
 }
 
 func createFreshmenRole(sid string, noviceParam1 uint32) (task *promise.Promise) {
 	task = promise.NewPromise()
 	go func() {
-		// connect sub server
-		v, err := utils.ConnectGuideServer(loginAddr, sid).Get()
+		// connect guide server
+		v, err := utils.ConnectGuideServer(guideAddr, sid).Get()
 		if err != nil {
 			task.Reject(errors.New("ConnectGuideServer promise rejected: " + err.Error()))
 			return
 		}
 		// create
-
-		conn := v.(*snet.Connection)
+		conn := v.(*snet.GuideServerConnection)
 		v, err = createRole(conn).Get()
 		if err != nil {
 			task.Reject(errors.New("createRole promise rejected: " + err.Error()))
 			return
 		}
+
 		// get online server list
 		list, err := utils.GetOnlineServerList(conn)
 		if err != nil || len(list) < 1 {
@@ -116,7 +111,15 @@ func createFreshmenRole(sid string, noviceParam1 uint32) (task *promise.Promise)
 	return task
 }
 
-func finishNoviceAfterLogin(conn *snet.Connection, info snet.ResponseForLogin, noviceParam1 uint32) snet.PetInfo {
+func finishNoviceAfterLogin(conn *snet.OnlineServerConnection, info snet.ResponseForLogin, noviceParam1 uint32) (pet snet.PetInfo, err error) {
+	defer func() {
+		x := recover()
+		if x != nil {
+			err = errors.New("Error: " + fmt.Sprint(x))
+			log.Println(x)
+			fmt.Println("发生错误：", x)
+		}
+	}()
 	fmt.Printf("%+v\n", info)
 	fmt.Println("登录成功")
 	fmt.Printf("userID: %v sessionID: %X\n", conn.UserID, conn.SessionID)
@@ -135,11 +138,11 @@ func finishNoviceAfterLogin(conn *snet.Connection, info snet.ResponseForLogin, n
 	utils.MustResolvePromise(conn.ListMapPlayer())
 
 	petinfo := utils.MustResolvePromise(conn.GetPetInfo(petTm))
-	return petinfo.(snet.PetInfo)
+	return petinfo.(snet.PetInfo), nil
 }
 
 // noinspection GoUnusedFunction
-func createRole(conn *snet.Connection) *promise.Promise {
+func createRole(conn *snet.GuideServerConnection) *promise.Promise {
 	prom := promise.NewPromise()
 	go func() {
 		var nickname [16]byte

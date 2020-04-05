@@ -10,7 +10,7 @@ import (
 	"main/snet/core"
 )
 
-func (c *Connection) LoginByEmail(email string, password string) (prom *promise.Promise) {
+func (c *GuideServerConnection) LoginByEmail(email string, password string) (prom *promise.Promise) {
 	const channel uint32 = 30
 	const gameType uint32 = 2
 	t := fmt.Sprintf("%x", md5.Sum([]byte(password)))
@@ -34,7 +34,7 @@ func (c *Connection) LoginByEmail(email string, password string) (prom *promise.
 	return prom
 }
 
-func (c *Connection) Login(password string) (prom *promise.Promise) {
+func (c *GuideServerConnection) Login(password string) (prom *promise.Promise) {
 	const channel uint32 = 30
 	const gameType uint32 = 2
 	t := fmt.Sprintf("%x", md5.Sum([]byte(password)))

@@ -1,3 +1,4 @@
+// unavailable
 package main
 
 import (
@@ -12,7 +13,7 @@ import (
 
 var (
 	configFile *config.ServerConfig
-	loginAddr  *net.TCPAddr
+	guideAddr  *net.TCPAddr
 )
 
 func init() {
@@ -24,15 +25,15 @@ func init() {
 		panic(err)
 	}
 	fmt.Println(configFile)
-	loginAddr, err = config.GetLoginServer(configFile.IpConfig.HTTP.URL)
+	guideAddr, err = configFile.GetGuideServerByHTTP()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(loginAddr)
+	fmt.Println(guideAddr)
 }
 
 func main() {
-	loginConn, err := snet.Connect(loginAddr)
+	loginConn, err := snet.Connect(guideAddr)
 	if err != nil {
 		panic(err)
 	}

@@ -58,11 +58,11 @@ type PetInfo struct {
 	EffectList  []PetEffectInfo
 }
 
-func (c *Connection) ReleasePet(catchTime uint32, flag uint32) *promise.Promise {
+func (c *OnlineServerConnection) ReleasePet(catchTime uint32, flag uint32) *promise.Promise {
 	return c.SendInPromise(Command_PET_RELEASE, catchTime, flag) // TODO: parse the body
 }
 
-func (c *Connection) GetPetInfo(catchTime uint32) (p *promise.Promise) {
+func (c *OnlineServerConnection) GetPetInfo(catchTime uint32) (p *promise.Promise) {
 	p = promise.NewPromise()
 	c.SendInPromise(Command_GET_PET_INFO, catchTime).
 		OnSuccess(func(v interface{}) {
@@ -79,7 +79,7 @@ func (c *Connection) GetPetInfo(catchTime uint32) (p *promise.Promise) {
 	return p
 }
 
-func (c *Connection) GetPetList() (p *promise.Promise) {
+func (c *OnlineServerConnection) GetPetList() (p *promise.Promise) {
 	p = promise.NewPromise()
 	c.SendInPromise(Command_GET_PET_LIST).
 		OnSuccess(func(v interface{}) {
