@@ -62,7 +62,7 @@ func depackFromStream(reader io.Reader) (pack *RecvPacket, err error) {
 		}
 		log.Println("response bytes", buffer[:n])
 		index += n
-		log.Printf("Receive Packet Pead %d/%d bytes\n", index, packetHeadLen)
+		log.Printf("Receive Packet Head %d/%d bytes\n", index, packetHeadLen)
 	}
 	log.Println("Packet Head: ", buffer[:packetHeadLen])
 	head, err := parseHead(bytes.NewReader(buffer[:packetHeadLen]))
