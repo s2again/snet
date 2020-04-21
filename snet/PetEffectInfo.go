@@ -19,10 +19,6 @@ func parsePetEffectInfo(buffer core.PacketBody) (info PetEffectInfo, err error) 
 			return
 		}
 	}()
-	core.MustBinaryRead(buffer, &info.ItemID)
-	core.MustBinaryRead(buffer, &info.Status)
-	core.MustBinaryRead(buffer, &info.LeftCount)
-	core.MustBinaryRead(buffer, &info.EffectID)
-	core.MustBinaryRead(buffer, &info.Arg)
+	core.MustBinaryRead(buffer, &info)
 	return
 }

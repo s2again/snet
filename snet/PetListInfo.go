@@ -16,7 +16,6 @@ func parsePetListInfo(buffer core.PacketBody) (info PetListInfo, err error) {
 			return
 		}
 	}()
-	core.MustBinaryRead(buffer, &info.ID)
-	core.MustBinaryRead(buffer, &info.CatchTime)
+	core.MustBinaryRead(buffer, &info)
 	return
 }

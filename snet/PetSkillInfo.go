@@ -16,7 +16,6 @@ func parsePetSkillInfo(buffer core.PacketBody) (info PetSkillInfo, err error) {
 			return
 		}
 	}()
-	core.MustBinaryRead(buffer, &info.ID)
-	core.MustBinaryRead(buffer, &info.PP)
+	core.MustBinaryRead(buffer, &info)
 	return
 }
