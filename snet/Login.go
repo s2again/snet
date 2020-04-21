@@ -23,10 +23,6 @@ func (c *GuideServerConnection) LoginByEmail(email string, password string) (pro
 	c.SendInPromise(Command_MAIN_LOGIN_IN, emailBytes(email), pwdHashBytes(password), channel, gameType, uint32(0)).
 		OnSuccess(func(v interface{}) {
 			body := v.(core.PacketBody)
-			if body.Len() == 0 {
-				prom.Reject(fmt.Errorf("登录失败，可能密码错误。"))
-				return
-			}
 			resp, err := parseLoginResponseFromGuide(body)
 			if err == nil {
 				log.Printf("LoginResponse %X\n", v.(core.PacketBody).Bytes())
@@ -36,7 +32,7 @@ func (c *GuideServerConnection) LoginByEmail(email string, password string) (pro
 			}
 		}).
 		OnFailure(func(v interface{}) {
-			prom.Reject(v.(error))
+			prom.Reject(fmt.Errorf("登录失败，可能密码错误。 %v", v))
 		})
 	return prom
 }
@@ -48,10 +44,6 @@ func (c *GuideServerConnection) Login(password string) (prom *promise.Promise) {
 	c.SendInPromise(Command_MAIN_LOGIN_IN, pwdHashBytes(password), channel, gameType, uint32(0)).
 		OnSuccess(func(v interface{}) {
 			body := v.(core.PacketBody)
-			if body.Len() == 0 {
-				prom.Reject(fmt.Errorf("登录失败，可能密码错误。"))
-				return
-			}
 			resp, err := parseLoginResponseFromGuide(body)
 			if err == nil {
 				log.Printf("LoginResponse %X\n", v.(core.PacketBody).Bytes())
@@ -61,7 +53,7 @@ func (c *GuideServerConnection) Login(password string) (prom *promise.Promise) {
 			}
 		}).
 		OnFailure(func(v interface{}) {
-			prom.Reject(v.(error))
+			prom.Reject(fmt.Errorf("登录失败，可能密码错误。 %v", v))
 		})
 	return prom
 }
