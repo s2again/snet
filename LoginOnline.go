@@ -7,7 +7,7 @@ import (
 
 	"github.com/fanliao/go-promise"
 
-	"main/snet/core"
+	"snet/core"
 )
 
 type LoginResponseFromOnline struct {

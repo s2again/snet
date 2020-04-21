@@ -5,7 +5,7 @@ import (
 	"net"
 	"strconv"
 
-	"main/snet/core"
+	"snet/core"
 )
 
 const gameChannel uint32 = 0

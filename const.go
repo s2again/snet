@@ -1,6 +1,6 @@
 package snet
 
-import "main/snet/core"
+import "snet/core"
 
 //noinspection GoUnusedConst,GoSnakeCaseUsage
 const (

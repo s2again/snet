@@ -1,6 +1,6 @@
 package snet
 
-import "main/snet/core"
+import "snet/core"
 
 // com.robot.core.info.pet.PetEffectInfo
 type PetEffectInfo struct {
