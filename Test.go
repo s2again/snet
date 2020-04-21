@@ -3,7 +3,7 @@ package snet
 import (
 	"log"
 
-	"main/snet/core"
+	"github.com/s2again/snet/core"
 )
 
 // echo测试。服务器原样回复客户端的body

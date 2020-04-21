@@ -3,7 +3,7 @@ package snet
 import (
 	"github.com/fanliao/go-promise"
 
-	"main/snet/core"
+	"github.com/s2again/snet/core"
 )
 
 type NoviceFinishItem struct {

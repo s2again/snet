@@ -1,6 +1,6 @@
 package snet
 
-import "main/snet/core"
+import "github.com/s2again/snet/core"
 
 // com.robot.core.info.pet.PetSkillInfo
 type PetSkillInfo struct {
