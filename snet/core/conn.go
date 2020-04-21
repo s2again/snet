@@ -3,6 +3,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"log"
 	"net"
@@ -16,6 +17,8 @@ import (
 
 const ProtocolVersion byte = '1'
 const packetHeadLen = 17
+
+var ProtocolEndian = binary.BigEndian
 
 type MsgListener func(body PacketBody)
 type MsgListenerID *MsgListener
@@ -221,7 +224,7 @@ func (c *Connection) Send(cmd Command, body ...interface{}) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Send Message %+v %v \n", head, packetBin.Bytes())
+	log.Printf("Send Message %+v %X \n", head, packetBin.Bytes())
 	_, err = c.tcpConn.Write(packetBin.Bytes())
 	if err != nil {
 		return err

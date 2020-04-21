@@ -10,23 +10,30 @@ import (
 	"main/snet/core"
 )
 
-func (c *GuideServerConnection) LoginByEmail(email string, password string) (prom *promise.Promise) {
-	const channel uint32 = 30
-	const gameType uint32 = 2
-	t := fmt.Sprintf("%x", md5.Sum([]byte(password)))
-	t = fmt.Sprintf("%x", md5.Sum([]byte(t)))
-	var pwd [32]byte
-	copy(pwd[:], []byte(t)[:32])
-	log.Println(t)
-	var emailBytes [64]byte
-	copy(emailBytes[:], []byte(email)[:64])
+type LoginResponseFromGuide struct {
+	SessionID   [16]byte
+	RoleCreated bool
+}
 
+func (c *GuideServerConnection) LoginByEmail(email string, password string) (prom *promise.Promise) {
+	const channel uint32 = 0
+	const gameType uint32 = 1
 	prom = promise.NewPromise()
 	c.SetSession(0, [16]byte{})
-	c.SendInPromise(Command_MAIN_LOGIN_IN, emailBytes, pwd, channel, gameType, uint32(0)).
+	c.SendInPromise(Command_MAIN_LOGIN_IN, emailBytes(email), pwdHashBytes(password), channel, gameType, uint32(0)).
 		OnSuccess(func(v interface{}) {
-			fmt.Printf("LoginResponse %X\n", v.(core.PacketBody).Bytes())
-			prom.Resolve(v)
+			body := v.(core.PacketBody)
+			if body.Len() == 0 {
+				prom.Reject(fmt.Errorf("登录失败，可能密码错误。"))
+				return
+			}
+			resp, err := parseLoginResponseFromGuide(body)
+			if err == nil {
+				log.Printf("LoginResponse %X\n", v.(core.PacketBody).Bytes())
+				prom.Resolve(resp)
+			} else {
+				prom.Reject(fmt.Errorf("LoginByEmail Rejected, reason: %v", err))
+			}
 		}).
 		OnFailure(func(v interface{}) {
 			prom.Reject(v.(error))
@@ -35,32 +42,56 @@ func (c *GuideServerConnection) LoginByEmail(email string, password string) (pro
 }
 
 func (c *GuideServerConnection) Login(password string) (prom *promise.Promise) {
-	const channel uint32 = 30
-	const gameType uint32 = 2
-	t := fmt.Sprintf("%x", md5.Sum([]byte(password)))
-	t = fmt.Sprintf("%x", md5.Sum([]byte(t)))
-	var pwd [32]byte
-	copy(pwd[:], []byte(t)[:32])
-	log.Println(t)
+	const channel uint32 = 0
+	const gameType uint32 = 1
 	prom = promise.NewPromise()
-
-	/*c.SendInPromise(103, pwd, channel, gameType, uint32(0), [16]byte{}, [6]byte{}, [64]byte{byte('0'), 0}).
-	OnSuccess(func(v interface{}) {
-		fmt.Printf("LoginResponse %X\n", v.(core.PacketBody).Bytes())
-		prom.Resolve(v)
-	}).
-	OnFailure(func(v interface{}) {
-		prom.Reject(v.(error))
-	})
-	*/
-
-	c.SendInPromise(Command_MAIN_LOGIN_IN, pwd, channel, gameType, uint32(0)).
+	c.SendInPromise(Command_MAIN_LOGIN_IN, pwdHashBytes(password), channel, gameType, uint32(0)).
 		OnSuccess(func(v interface{}) {
-			fmt.Printf("LoginResponse %X\n", v.(core.PacketBody).Bytes())
-			prom.Resolve(v)
+			body := v.(core.PacketBody)
+			if body.Len() == 0 {
+				prom.Reject(fmt.Errorf("登录失败，可能密码错误。"))
+				return
+			}
+			resp, err := parseLoginResponseFromGuide(body)
+			if err == nil {
+				log.Printf("LoginResponse %X\n", v.(core.PacketBody).Bytes())
+				prom.Resolve(resp)
+			} else {
+				prom.Reject(fmt.Errorf("Login Rejected, reason: %v", err))
+			}
 		}).
 		OnFailure(func(v interface{}) {
 			prom.Reject(v.(error))
 		})
 	return prom
+}
+
+func emailBytes(email string) (emailBytes [64]byte) {
+	copy(emailBytes[:], []byte(email)[:64])
+	return
+}
+
+func pwdHashBytes(password string) (hashBytes [32]byte) {
+	t := fmt.Sprintf("%x", md5.Sum([]byte(password)))
+	copy(hashBytes[:], []byte(t)[:32])
+	return
+}
+
+func parseLoginResponseFromGuide(buffer core.PacketBody) (info LoginResponseFromGuide, err error) {
+	defer func() {
+		if x := recover(); x != nil {
+			err = x.(error)
+			return
+		}
+	}()
+	var t struct {
+		SessionID   [16]byte
+		RoleCreated uint32
+	}
+	core.MustBinaryRead(buffer, &t)
+	info = LoginResponseFromGuide{
+		SessionID:   t.SessionID,
+		RoleCreated: t.RoleCreated != 0,
+	}
+	return
 }

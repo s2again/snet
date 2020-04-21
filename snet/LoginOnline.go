@@ -10,7 +10,7 @@ import (
 	"main/snet/core"
 )
 
-type ResponseForLogin struct {
+type LoginResponseFromOnline struct {
 	UserID                                                        uint32
 	RegTime                                                       time.Time
 	Nick                                                          string
@@ -26,7 +26,7 @@ type ResponseForLogin struct {
 func (c *OnlineServerConnection) LoginOnline() *promise.Promise {
 	prom := promise.NewPromise()
 	c.SendInPromise(Command_LOGIN_IN, c.SessionID).OnSuccess(func(v interface{}) {
-		info, err := parseUserInfoForLogin(v.(core.PacketBody))
+		info, err := parseLoginResponseFromOnline(v.(core.PacketBody))
 		if err != nil {
 			log.Println("parseCommendSvrInfo error: ", err)
 			prom.Reject(err)
@@ -40,12 +40,12 @@ func (c *OnlineServerConnection) LoginOnline() *promise.Promise {
 	return prom
 }
 
-func (c *OnlineServerConnection) LoginOnlineAndCallback(callback func(ResponseForLogin)) error {
+func (c *OnlineServerConnection) LoginOnlineAndCallback(callback func(LoginResponseFromOnline)) error {
 	body, err := c.SendInPromise(Command_LOGIN_IN, c.SessionID).Get()
 	if err != nil {
 		return err
 	}
-	info, err := parseUserInfoForLogin(body.(core.PacketBody))
+	info, err := parseLoginResponseFromOnline(body.(core.PacketBody))
 	if err != nil {
 		log.Println("parseCommendSvrInfo error: ", err, "connection terminated.")
 		return err
@@ -54,7 +54,7 @@ func (c *OnlineServerConnection) LoginOnlineAndCallback(callback func(ResponseFo
 	return nil
 }
 
-func parseUserInfoForLogin(buffer core.PacketBody) (info ResponseForLogin, err error) {
+func parseLoginResponseFromOnline(buffer core.PacketBody) (info LoginResponseFromOnline, err error) {
 	defer func() {
 		if x := recover(); x != nil {
 			err = x.(error)
@@ -86,7 +86,7 @@ func parseUserInfoForLogin(buffer core.PacketBody) (info ResponseForLogin, err e
 	core.MustBinaryRead(buffer, &loginCnt, &inviter, &newInviteeCnt)
 	core.MustBinaryRead(buffer, &vipLevel, &vipValue, &vipStage, &autoCharge, &vipEndTime)
 	core.MustBinaryRead(buffer, &freshManBonus, &nonoChipList, &dailyRes)
-	return ResponseForLogin{
+	return LoginResponseFromOnline{
 		UserID:  userID,
 		RegTime: time.Unix(int64(regTime), 0),
 		Nick:    string(bytes.Trim(nick[:], "\u0000")),

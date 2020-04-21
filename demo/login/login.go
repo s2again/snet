@@ -11,6 +11,8 @@ import (
 	"main/snet"
 )
 
+const guideAddrString = "129.211.42.134:1863"
+
 var (
 	configFile *config.ServerConfig
 	guideAddr  *net.TCPAddr
@@ -25,17 +27,35 @@ func init() {
 		panic(err)
 	}
 	fmt.Println(configFile)
-	guideAddr, err = configFile.GetGuideServerByHTTP()
+	guideAddr, err = net.ResolveTCPAddr("tcp4", guideAddrString)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(guideAddr)
 }
 
+const (
+	testAccount  = 922610556
+	testPassword = "123456zzz"
+)
+
+var exit = make(chan interface{})
+
 func main() {
-	loginConn, err := snet.Connect(guideAddr)
+	loginConn, err := snet.ConnectGuideServer(guideAddr)
 	if err != nil {
 		panic(err)
 	}
-	loginConn.SendInPromise(103)
+	loginConn.UserID = testAccount
+	p := loginConn.Login(testPassword)
+	p.OnSuccess(func(v interface{}) {
+		info := v.(snet.LoginResponseFromGuide)
+		fmt.Printf("%+v\n", info)
+		fmt.Printf("sid: %X%X", loginConn.UserID, info.SessionID)
+		exit <- 1
+	}).OnFailure(func(v interface{}) {
+		fmt.Println(v)
+		exit <- 1
+	})
+	<-exit
 }

@@ -119,7 +119,7 @@ func createFreshmenRole(sid string, noviceParam1 uint32) (task *promise.Promise)
 			}
 			goto connected
 		connected:
-			pet, err = finishNoviceAfterLogin(onlineConn, resp.(snet.ResponseForLogin), noviceParam1)
+			pet, err = finishNoviceAfterLogin(onlineConn, resp.(snet.LoginResponseFromOnline), noviceParam1)
 			if err != nil {
 				task.Reject(errors.New("connectOnline promise rejected: " + err.Error()))
 				return
@@ -137,7 +137,7 @@ func createFreshmenRole(sid string, noviceParam1 uint32) (task *promise.Promise)
 	return task
 }
 
-func finishNoviceAfterLogin(conn *snet.OnlineServerConnection, info snet.ResponseForLogin, noviceParam1 uint32) (pet snet.PetInfo, err error) {
+func finishNoviceAfterLogin(conn *snet.OnlineServerConnection, info snet.LoginResponseFromOnline, noviceParam1 uint32) (pet snet.PetInfo, err error) {
 	defer func() {
 		x := recover()
 		if x != nil {
