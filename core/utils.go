@@ -3,10 +3,7 @@ package core
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/hex"
-	"errors"
 	"io"
-	"strconv"
 )
 
 func head2binary(head SendPacketHead) (buffer *bytes.Buffer, err error) {
@@ -54,20 +51,4 @@ func MustBinaryWrite(r io.Writer, data ...interface{}) {
 			panic(err)
 		}
 	}
-}
-
-func ParseSIDString(sid string) (userID uint32, session [16]byte, err error) {
-	if len(sid) != 40 {
-		err = errors.New("illegal sid length")
-		return
-	}
-	userIDtmp, err := strconv.ParseUint(sid[:8], 16, 32)
-	userID = uint32(userIDtmp)
-
-	sessiontmp, err := hex.DecodeString(sid[8:40])
-	if err != nil {
-		return
-	}
-	copy(session[:], sessiontmp[:32])
-	return
 }
